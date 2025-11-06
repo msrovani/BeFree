@@ -1,0 +1,20 @@
+{
+  "name": "befree-os",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "sdk/*",
+    "contracts",
+    "packages/*",
+    "infra/*"
+  ],
+  "scripts": {
+    "build": "echo build monorepo",
+    "dev": "echo start dev env",
+    "test": "echo run tests"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
