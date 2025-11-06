@@ -1,0 +1,35 @@
+{
+  "$schema": "https://schema.befreeos.org/manifest/generation.json",
+  "type": "object",
+  "properties": {
+    "did": {
+      "type": "string"
+    },
+    "model": {
+      "type": "string"
+    },
+    "prompt_hash": {
+      "type": "string"
+    },
+    "output_hash": {
+      "type": "string"
+    },
+    "sig": {
+      "type": "string"
+    },
+    "level": {
+      "type": "string",
+      "enum": [
+        "generated_ai",
+        "assisted_ai"
+      ]
+    }
+  },
+  "required": [
+    "did",
+    "model",
+    "output_hash",
+    "sig",
+    "level"
+  ]
+}

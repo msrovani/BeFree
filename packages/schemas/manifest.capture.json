@@ -1,0 +1,40 @@
+{
+  "$schema": "https://schema.befreeos.org/manifest/capture.json",
+  "type": "object",
+  "properties": {
+    "did": {
+      "type": "string"
+    },
+    "timestamp": {
+      "type": "number"
+    },
+    "device": {
+      "type": "string"
+    },
+    "frames": {
+      "type": "number"
+    },
+    "rolling_hash": {
+      "type": "string"
+    },
+    "attestation": {
+      "type": "string"
+    },
+    "sig": {
+      "type": "string"
+    },
+    "level": {
+      "type": "string",
+      "enum": [
+        "proof_of_capture"
+      ]
+    }
+  },
+  "required": [
+    "did",
+    "timestamp",
+    "rolling_hash",
+    "sig",
+    "level"
+  ]
+}
