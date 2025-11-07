@@ -1,2 +1,2 @@
-# Manifesto BEFREE OS
+# Manifesto BEFREE
 Liberdade com responsabilidade criptográfica.
