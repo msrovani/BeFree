@@ -49,3 +49,10 @@ export const leaderboard = (limit = 10) => {
 export const clearEvents = () => {
   eventLog.length = 0;
 };
+
+export const exportReputationEvents = () => [...eventLog];
+
+export const importReputationEvents = (events: ReputationEvent[] = []) => {
+  eventLog.length = 0;
+  events.forEach((event) => eventLog.push(event));
+};

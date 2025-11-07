@@ -53,6 +53,11 @@ befree-os/
 - **IA:** sumarização, extração de palavras-chave e busca semântica determinística.
 - **Conteúdo:** classificação de selos e checagens básicas de moderação.
 - **Reputação:** registro de eventos com decaimento exponencial e ranking local.
+- **Orquestração:** pipeline integrado que conecta identidade, reputação, economia e IA em transmissões P2P assinadas, com diário local de publicações, inbox sincronizável e persistência opcional em disco.
+- **Governança:** propostas colaborativas, votação ponderada, cálculo de quórum e arquivamento automático das decisões no snapshot do orquestrador.
+- **Analytics:** digest diário das publicações com tendências de tags, pulsações de autores, intenções dominantes e palavras-chave destacadas.
+- **Automação:** engine de tarefas reativas e jobs recorrentes que disparam ações a partir de publicações, votos, reputação, ledger e digest analíticos.
+- **Telemetria:** coletor em memória com contadores, gauges, histogramas e eventos recentes para inspecionar o desempenho dos pipelines, sincronia de feeds, governança e automações.
 - **Orquestração:** pipeline integrado que conecta identidade, reputação, economia e IA em transmissões P2P assinadas, com diário local de publicações e inbox sincronizável.
 
 ## CLI
@@ -85,6 +90,12 @@ befree ledger:history
 ```ts
 import { createCommunityOrchestrator } from '../sdk/platform';
 
+const orchestrator = createCommunityOrchestrator({
+  defaultReward: 5,
+  rewardMemo: 'Curadoria diária',
+  storage: './.befree/orchestrator.json',
+  autosaveIntervalMs: 10_000,
+});
 const orchestrator = createCommunityOrchestrator({ defaultReward: 5, rewardMemo: 'Curadoria diária' });
 
 await orchestrator.start();
@@ -107,6 +118,65 @@ console.log(`Novos conteúdos recebidos: ${fresh.length}`);
 // Acessar feeds locais
 console.log(orchestrator.getPublishedFeed());
 console.log(orchestrator.getInbox());
+
+// Abrir uma proposta comunitária e votar nela
+const proposal = await orchestrator.createProposal(
+  {
+    title: 'Priorizar recompensas para mentores',
+    description: 'Definir se o tesouro deve reservar 10% das emissões para mentores comunitários.',
+    options: [{ label: 'Aprovar' }, { label: 'Revisar percentuais' }],
+    metadata: { categoria: 'tesouro' },
+  },
+  { activate: true }
+);
+
+await orchestrator.voteOnProposal(proposal.id, { choice: proposal.options[0].id });
+
+console.log(await orchestrator.getGovernanceProposals());
+
+// Exportar instantâneo consolidado (autor, reputação, feed, inbox, ledger e governança)
+console.log(await orchestrator.snapshot());
+
+// Gerar digest analítico (tendências de tags, autores ativos, intenções e resumo)
+console.log(await orchestrator.generateDigest({ windowMs: 1000 * 60 * 60 * 12 }));
+
+// Automatizar rotinas: reagir a publicações e agendar digest periódicos
+orchestrator.registerAutomationTask({
+  description: 'Saudação para novos conteúdos',
+  triggers: 'content:published',
+  run: async ({ envelope }) => {
+    console.log(`Novo post de ${envelope.author.label ?? envelope.author.did}: ${envelope.manifest.title}`);
+  },
+});
+
+orchestrator.scheduleDigest({
+  intervalMs: 1000 * 60 * 60 * 6,
+  digestOptions: { topTags: 3 },
+  taskId: 'digest:6h',
+});
+
+// Consultar métricas de execução e resetar o coletor quando necessário
+console.log(orchestrator.getTelemetrySnapshot());
+orchestrator.resetTelemetry();
+
+// Persistir estado sob demanda (além do autosave)
+await orchestrator.saveState();
+```
+
+O campo `storage` aceita um caminho para arquivo (usando o adaptador de disco padrão) ou um adaptador customizado que implemente `load()`/`save()`. Com `autosaveIntervalMs` definido, o orquestrador grava o estado consolidado em intervalos regulares e também após publicações, recebimentos ou limpezas de inbox.
+
+### Observando métricas em tempo real
+
+O orquestrador expõe um coletor de telemetria interno (`getTelemetry()`) e snapshots serializáveis (`getTelemetrySnapshot()`) que incluem:
+
+- Contadores agregados (`content.publish.success`, `governance.votes.attempts`, `storage.persist.errors`, etc.).
+- Gauges instantâneos como o intervalo de autosave (`orchestrator.autosave.interval_ms`).
+- Histogramas com duração de pipelines (`content.publish.duration`, `analytics.digests.duration`).
+- Eventos recentes (últimas operações em `storage`, `automation`, `analytics`, `content`, entre outros).
+
+Esses dados podem ser usados para dashboards ou alertas rápidos enquanto jobs e automações estão ativos.
+
+Tarefas cadastradas com `registerAutomationTask` recebem o evento disparador (como `content:published`, `governance:proposal:closed` ou `analytics:digest`) e podem manter estado interno via `context.setState`. Jobs recorrentes criados por `scheduleAutomationJob` ou `scheduleDigest` executam funções assíncronas em intervalos configuráveis, emitindo eventos `automation:log` a cada execução ou falha.
 
 // Exportar instantâneo consolidado (autor, reputação, feed, inbox e ledger)
 console.log(await orchestrator.snapshot());

@@ -7,6 +7,15 @@ export interface TransferReceipt {
   timestamp: number;
 }
 
+export interface SerializedTransferReceipt extends Omit<TransferReceipt, 'amount'> {
+  amount: string;
+}
+
+export interface SerializedLedgerState {
+  ledger: SerializedTransferReceipt[];
+  balances: Record<string, string>;
+}
+
 export type BalanceMap = Map<string, bigint>;
 
 const ledger: TransferReceipt[] = [];
@@ -80,4 +89,31 @@ export const history = () => [...ledger];
 export const resetLedger = () => {
   ledger.length = 0;
   balances.clear();
+};
+
+export const exportLedgerState = (): SerializedLedgerState => ({
+  ledger: ledger.map(({ amount, ...rest }) => ({ ...rest, amount: amount.toString() })),
+  balances: Object.fromEntries([...balances.entries()].map(([account, value]) => [account, value.toString()])),
+});
+
+export const importLedgerState = (state?: SerializedLedgerState) => {
+  ledger.length = 0;
+  balances.clear();
+  if (!state) return;
+
+  (state.ledger ?? []).forEach((entry) => {
+    const receipt: TransferReceipt = {
+      ...entry,
+      amount: BigInt(entry.amount),
+    };
+    ledger.push(receipt);
+  });
+
+  Object.entries(state.balances ?? {}).forEach(([account, value]) => {
+    try {
+      balances.set(account, BigInt(value));
+    } catch (error) {
+      throw new Error(`Invalid balance value for ${account}`);
+    }
+  });
 };
