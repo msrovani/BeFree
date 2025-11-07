@@ -58,6 +58,7 @@ befree-os/
 - **Analytics:** digest diário das publicações com tendências de tags, pulsações de autores, intenções dominantes e palavras-chave destacadas.
 - **Automação:** engine de tarefas reativas e jobs recorrentes que disparam ações a partir de publicações, votos, reputação, ledger e digest analíticos.
 - **Telemetria:** coletor em memória com contadores, gauges, histogramas e eventos recentes para inspecionar o desempenho dos pipelines, sincronia de feeds, governança e automações.
+- **Orquestração:** pipeline integrado que conecta identidade, reputação, economia e IA em transmissões P2P assinadas, com diário local de publicações e inbox sincronizável.
 
 ## CLI
 Instale dependências e linke o CLI:
@@ -95,6 +96,7 @@ const orchestrator = createCommunityOrchestrator({
   storage: './.befree/orchestrator.json',
   autosaveIntervalMs: 10_000,
 });
+const orchestrator = createCommunityOrchestrator({ defaultReward: 5, rewardMemo: 'Curadoria diária' });
 
 await orchestrator.start();
 await orchestrator.publishContent(
@@ -175,6 +177,10 @@ O orquestrador expõe um coletor de telemetria interno (`getTelemetry()`) e snap
 Esses dados podem ser usados para dashboards ou alertas rápidos enquanto jobs e automações estão ativos.
 
 Tarefas cadastradas com `registerAutomationTask` recebem o evento disparador (como `content:published`, `governance:proposal:closed` ou `analytics:digest`) e podem manter estado interno via `context.setState`. Jobs recorrentes criados por `scheduleAutomationJob` ou `scheduleDigest` executam funções assíncronas em intervalos configuráveis, emitindo eventos `automation:log` a cada execução ou falha.
+
+// Exportar instantâneo consolidado (autor, reputação, feed, inbox e ledger)
+console.log(await orchestrator.snapshot());
+```
 
 ## Desenvolvimento
 ```bash
