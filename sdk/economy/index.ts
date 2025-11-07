@@ -51,7 +51,7 @@ export const ensureTreasury = (amount: bigint) => {
   }
 };
 
-export const payFREE = async (to: string, amount: string | number | bigint, memo?: string) => {
+export const payBFR = async (to: string, amount: string | number | bigint, memo?: string) => {
   const value = toBigInt(amount);
   ensureTreasury(value);
   debit('treasury', value);

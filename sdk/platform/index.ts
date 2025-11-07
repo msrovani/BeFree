@@ -9,7 +9,7 @@ import { Message, P2PNode, PeerInfo } from '../p2p';
 import { summarize, extractKeywords, detectIntent } from '../ai';
 import { classify, moderate, ContentManifest, ModerationFlag, Selo } from '../content';
 import {
-  payFREE,
+  payBFR,
   history as readLedgerHistory,
   TransferReceipt,
   exportLedgerState,
@@ -58,12 +58,6 @@ import {
   type TelemetryCollectorOptions,
   type TelemetrySnapshot,
 } from '../telemetry';
-import { createIdentity, IdentityKeys, sign, verify } from '../identity';
-import { Message, P2PNode, PeerInfo } from '../p2p';
-import { summarize, extractKeywords, detectIntent } from '../ai';
-import { classify, moderate, ContentManifest, ModerationFlag, Selo } from '../content';
-import { payFREE, history as readLedgerHistory, TransferReceipt } from '../economy';
-import { leaderboard, recordEvent, scoreFor } from '../reputation';
 
 const encoder = new TextEncoder();
 
@@ -105,6 +99,8 @@ export interface ContentPipelineResult {
   reward?: TransferReceipt;
   intent: string;
 }
+
+export type IncomingContentStatus = 'accepted' | 'duplicate' | 'invalid';
 
 export interface ContentBroadcastEnvelope {
   manifest: ContentManifest;
@@ -448,27 +444,6 @@ export class CommunityOrchestrator extends EventEmitter {
     });
     this.emit('ready', this.author);
     this.scheduleAutosave();
-  async start() {
-    if (this.node) return this;
-    this.node = await new P2PNode({ agent: 'befree-orchestrator', label: this.identity.label }, this.options.multiaddrs).start(
-      this.network
-    );
-    this.node.on('message:content:new', (message: Message<ContentBroadcastEnvelope>) => {
-      this.handleIncomingContent(message.payload, message.from).catch((error) => this.emit('content:error', error));
-    });
-    this.node.on('message:content:feed:request', (message: Message<FeedSyncRequestPayload>) => {
-      const { since = 0, limit = 50 } = message.payload ?? {};
-      const ordered = [...this.publishedFeed].sort((a, b) => a.timestamp - b.timestamp);
-      const filtered = ordered.filter((entry) => entry.timestamp > since);
-      const entries = limit > 0 ? filtered.slice(-limit) : filtered;
-      this.node?.respond(message, {
-        entries,
-        lastTimestamp: entries.length ? entries[entries.length - 1].timestamp : since,
-      });
-    });
-    this.node.on('peer:join', (info: PeerInfo) => this.emit('peer:join', info));
-    this.node.on('peer:left', (peerId: string) => this.emit('peer:left', peerId));
-    this.emit('ready', this.author);
     return this;
   }
 
@@ -487,10 +462,6 @@ export class CommunityOrchestrator extends EventEmitter {
       await this.persistState();
     });
     this.telemetry.recordEvent('orchestrator:stopped');
-    if (!this.node) return;
-    await this.node.stop(this.network);
-    this.node.removeAllListeners();
-    this.node = undefined;
   }
 
   getPeers() {
@@ -511,7 +482,7 @@ export class CommunityOrchestrator extends EventEmitter {
         const rewardAmount = options.rewardAmount ?? this.options.defaultReward;
         let reward: TransferReceipt | undefined;
         if (rewardAmount !== undefined) {
-          reward = await payFREE(
+          reward = await payBFR(
             options.rewardTo ?? this.identity.did,
             rewardAmount,
             options.rewardMemo ?? this.options.rewardMemo
@@ -579,68 +550,16 @@ export class CommunityOrchestrator extends EventEmitter {
     }
   }
 
-  private async handleIncomingContent(envelope: ContentBroadcastEnvelope, sourcePeer?: string) {
+  private async handleIncomingContent(
+    envelope: ContentBroadcastEnvelope,
+    sourcePeer?: string
+  ): Promise<IncomingContentStatus> {
     this.telemetry.increment('content.receive.attempts');
     if (this.seenSignatures.has(envelope.signature)) {
       this.telemetry.increment('content.receive.duplicates');
-      return;
+      return 'duplicate';
     }
     const started = Date.now();
-    const selo = await classify(manifest);
-    const moderation = await moderate(manifest);
-    const summary = await summarize(body);
-    const keywords = await extractKeywords(body);
-    const intent = await detectIntent(body);
-
-    const rewardAmount = options.rewardAmount ?? this.options.defaultReward;
-    let reward: TransferReceipt | undefined;
-    if (rewardAmount !== undefined) {
-      reward = await payFREE(options.rewardTo ?? this.identity.did, rewardAmount, options.rewardMemo ?? this.options.rewardMemo);
-    }
-
-    const result: ContentPipelineResult = { selo, moderation, summary, keywords, reward, intent };
-    const timestamp = Date.now();
-    const payloadBytes = encoder.encode(JSON.stringify({ manifest, body, result, timestamp }));
-    const signature = toBase64(await sign(payloadBytes, this.identity));
-
-    recordEvent({
-      did: this.identity.did,
-      type: 'content',
-      weight: 1 + (reward ? Math.max(0.25, toNumberSafe(reward.amount) / 1_000_000) : 0),
-      timestamp,
-      metadata: { selo, keywords },
-    });
-    if (reward) {
-      recordEvent({
-        did: options.rewardTo ?? this.identity.did,
-        type: 'economy',
-        weight: Math.max(0.5, toNumberSafe(reward.amount) / 1_000_000),
-        timestamp,
-        metadata: { tx: reward.tx },
-      });
-    }
-
-    const envelope: ContentBroadcastEnvelope = {
-      manifest,
-      body,
-      result,
-      timestamp,
-      author: this.author,
-      signature,
-    };
-
-    this.seenSignatures.add(signature);
-    this.publishedFeed.push(envelope);
-
-    this.node?.broadcast('content:new', envelope);
-    this.emit('content:published', envelope);
-    return envelope;
-  }
-
-  private async handleIncomingContent(envelope: ContentBroadcastEnvelope, sourcePeer?: string) {
-    if (this.seenSignatures.has(envelope.signature)) {
-      return;
-    }
     const payloadBytes = encoder.encode(
       JSON.stringify({ manifest: envelope.manifest, body: envelope.body, result: envelope.result, timestamp: envelope.timestamp })
     );
@@ -651,14 +570,10 @@ export class CommunityOrchestrator extends EventEmitter {
       this.telemetry.increment('content.receive.invalid');
       this.telemetry.recordEvent('content:invalid', { author: envelope.author.did });
       this.telemetry.observe('content.receive.duration', Date.now() - started);
-      return;
+      return 'invalid';
     }
     this.seenSignatures.add(envelope.signature);
     const socialEvent: ReputationEvent = {
-      return;
-    }
-    this.seenSignatures.add(envelope.signature);
-    recordEvent({
       did: envelope.author.did,
       type: 'social',
       weight: 0.75,
@@ -679,6 +594,7 @@ export class CommunityOrchestrator extends EventEmitter {
     });
     await this.persistState();
     this.telemetry.observe('content.receive.duration', Date.now() - started);
+    return 'accepted';
   }
 
   async requestAssistance(text: string): Promise<AssistanceResult> {
@@ -726,36 +642,6 @@ export class CommunityOrchestrator extends EventEmitter {
       return result;
     }
     this.telemetry.recordEvent('content:feed:read', { total: ordered.length });
-    });
-    this.inbox.push({ envelope, receivedAt: Date.now(), sourcePeer });
-    this.lastSyncedAt = Math.max(this.lastSyncedAt, envelope.timestamp);
-    this.emit('content:received', envelope);
-  }
-
-  async requestAssistance(text: string): Promise<AssistanceResult> {
-    const summary = await summarize(text, 2);
-    const keywords = await extractKeywords(text);
-    const intent = await detectIntent(text);
-    return { summary, keywords, intent };
-  }
-
-  async reputationScore(did = this.identity.did) {
-    return scoreFor(did);
-  }
-
-  reputationLeaders(limit = 10) {
-    return leaderboard(limit);
-  }
-
-  ledgerHistory() {
-    return readLedgerHistory();
-  }
-
-  getPublishedFeed(limit?: number) {
-    const ordered = [...this.publishedFeed].sort((a, b) => a.timestamp - b.timestamp);
-    if (typeof limit === 'number' && limit > 0) {
-      return ordered.slice(-limit);
-    }
     return ordered;
   }
 
@@ -771,8 +657,6 @@ export class CommunityOrchestrator extends EventEmitter {
       return result;
     }
     this.telemetry.recordEvent('content:inbox:read', { total: filtered.length, since });
-      return filtered.slice(-limit);
-    }
     return filtered;
   }
 
@@ -783,8 +667,6 @@ export class CommunityOrchestrator extends EventEmitter {
       this.triggerPersist();
       this.telemetry.increment('content.inbox.cleared');
       this.telemetry.recordEvent('content:inbox:cleared', { removed: before });
-    if (!predicate) {
-      this.inbox.length = 0;
       return;
     }
     for (let i = this.inbox.length - 1; i >= 0; i -= 1) {
@@ -999,8 +881,10 @@ export class CommunityOrchestrator extends EventEmitter {
       const fresh: ContentBroadcastEnvelope[] = [];
       for (const entry of entries) {
         if (this.seenSignatures.has(entry.signature)) continue;
-        await this.handleIncomingContent(entry);
-        fresh.push(entry);
+        const status = await this.handleIncomingContent(entry);
+        if (status === 'accepted') {
+          fresh.push(entry);
+        }
       }
       if (payload?.lastTimestamp) {
         this.lastSyncedAt = Math.max(this.lastSyncedAt, payload.lastTimestamp);
@@ -1020,9 +904,6 @@ export class CommunityOrchestrator extends EventEmitter {
         message: error instanceof Error ? error.message : String(error),
       });
       this.telemetry.observe('content.sync.duration', Date.now() - started);
-      return fresh;
-    } catch (error) {
-      this.emit('content:error', error);
       return [];
     }
   }
@@ -1043,6 +924,14 @@ export class CommunityOrchestrator extends EventEmitter {
       authors: digest.feed.uniqueAuthors,
     });
     return digest;
+  }
+
+  async ingestContent(
+    envelope: ContentBroadcastEnvelope,
+    options: { sourcePeer?: string } = {}
+  ): Promise<IncomingContentStatus> {
+    await this.ensureRestored();
+    return this.handleIncomingContent(envelope, options.sourcePeer);
   }
 
   async snapshot(): Promise<OrchestratorSnapshot> {
@@ -1072,15 +961,6 @@ export class CommunityOrchestrator extends EventEmitter {
     this.telemetry.increment('storage.persist.manual');
     await this.persistState();
     this.telemetry.recordEvent('storage:saved:manual');
-  async snapshot(): Promise<OrchestratorSnapshot> {
-    const reputation = await this.reputationScore();
-    return {
-      author: this.author,
-      published: this.getPublishedFeed(),
-      inbox: this.getInbox(),
-      ledger: this.ledgerHistory(),
-      reputation,
-    };
   }
 }
 

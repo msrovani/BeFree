@@ -1,6 +1,8 @@
 # API Reference
 
-Este documento descreve a superfície inicial dos SDKs do BEFREE OS expostos no monorepo.
+Este documento descreve a superfície inicial dos SDKs do BEFREE expostos no monorepo.
+
+> **Branding:** todas as APIs refletem o rebranding para o token `BFR`. O ticker antigo `FREE` segue aceito apenas como referência histórica em interfaces legadas.
 
 ## Identidade (`sdk/identity`)
 
@@ -30,9 +32,9 @@ Envia uma requisição que espera resposta (`respond`) com timeout configurável
 ## Economia (`sdk/economy`)
 
 ### `credit(account, amount)` / `debit(account, amount)`
-Manipulam o balanço local em FREE (inteiro com precisão de 1e-6).
+Manipulam o balanço local em BFR (inteiro com precisão de 1e-6).
 
-### `payFREE(to, amount, memo?)`
+### `payBFR(to, amount, memo?)`
 Simula um pagamento a partir do tesouro, com emissão automática caso necessário.
 
 ### `history()`
@@ -153,13 +155,6 @@ Inicializa um orquestrador que conecta identidade, reputação, economia, IA e P
 ### `orchestrator.publishContent(manifest, body, options?)`
 Executa o pipeline completo (classificação, moderação, resumo, intenção, recompensa opcional) e transmite o envelope assinado via P2P. Emite eventos `content:published`, `content:received`, `content:invalid` e `content:error`, além de disparar automações `reputation:event`, `ledger:transfer` (quando houver recompensa) e `content:published` para tarefas registradas.
 Atualiza contadores (`content.publish.attempts/success/errors`), histogramas (`content.publish.duration`) e eventos recentes no coletor de telemetria associado.
-## Orquestração (`sdk/platform`)
-
-### `new CommunityOrchestrator(options?)`
-Inicializa um orquestrador que conecta identidade, reputação, economia, IA e P2P. Aceita identidade pré-existente, rede lógica (`network`), multiaddrs e configuração de recompensa padrão.
-
-### `orchestrator.publishContent(manifest, body, options?)`
-Executa o pipeline completo (classificação, moderação, resumo, intenção, recompensa opcional) e transmite o envelope assinado via P2P. Emite eventos `content:published`, `content:received`, `content:invalid` e `content:error`.
 
 ### `orchestrator.requestAssistance(text)`
 Retorna intenção, resumo curto e palavras-chave para um texto livre, reaproveitando os utilitários determinísticos de IA.
@@ -212,6 +207,9 @@ Manipulam o status da proposta e emitem eventos específicos (`governance:propos
 ### `orchestrator.syncFeed(options?)`
 Dispara uma requisição P2P para recuperar novas publicações de outros orquestradores e preenche o inbox local. Retorna somente os envelopes inéditos recebidos.
 
+### `orchestrator.ingestContent(envelope, { sourcePeer? })`
+Permite injetar manualmente envelopes assinados (ex.: integrações externas ou simulações) no inbox local sem depender do P2P. Retorna um status (`'accepted'`, `'duplicate'` ou `'invalid'`) conforme o envelope seja processado, ignorado ou rejeitado após a verificação da assinatura.
+
 ### `orchestrator.generateDigest(options?)`
 Gera um digest estruturado das interações recentes, combinando feed publicado e inbox (quando habilitado). O resultado inclui tendências de tags, autores mais ativos com seus pulsos ponderados, intenções detectadas e um resumo sintético dos conteúdos destacados. Emite evento `analytics:digest` (que também alimenta automações cadastradas) após o cálculo.
 Mede automaticamente a duração do processamento (`analytics.digests.duration`) e registra eventos `analytics:digest` com totais agregados na telemetria.
@@ -226,17 +224,27 @@ Força a persistência imediata do estado completo usando o adaptador configurad
 Exibem o coletor interno, retornam uma visão serializada das métricas atuais (contadores, gauges, histogramas e eventos recentes) e limpam o histórico acumulado, respectivamente.
 
 O orquestrador também emite eventos `storage:restored`, `storage:saved`, `storage:error`, `automation:log`, `automation:error`, `analytics:digest:scheduled` e uma família `governance:proposal:<evento>` para criação, ativação, voto, cancelamento e encerramento de propostas quando um adaptador está presente.
-### `orchestrator.syncFeed(options?)`
-Dispara uma requisição P2P para recuperar novas publicações de outros orquestradores e preenche o inbox local. Retorna somente os envelopes inéditos recebidos.
-
-### `orchestrator.snapshot()`
-Gera um instantâneo consolidado com autor, feed publicado, inbox, histórico do ledger e reputação atual.
 
 ### `createCommunityOrchestrator(options?)`
 Atalho que instancia o `CommunityOrchestrator` com as opções passadas.
 
 ### `createFileStorageAdapter(path)`
 Cria um adaptador de armazenamento que serializa o estado consolidado do orquestrador em um arquivo JSON (criando diretórios automaticamente). Útil para habilitar persistência local rápida sem depender de bancos externos.
+
+## Simulação (`sdk/simulation`)
+
+### `runSimulation(orchestrator, scenario, options?)`
+Executa um ou mais ciclos de um cenário roteirizado, coordenando publicações locais, ingestão de envelopes externos, geração de digest, governança, transferências simbólicas e comandos auxiliares (esperas artificiais, sincronização). Cada passo gera um log estruturado (`SimulationLogEntry`) com duração, resultado ou erro capturado.
+
+### `createSampleScenario()`
+Retorna um cenário de exemplo com publicações, ingestão simulada, geração de digest, abertura de proposta, voto externo e snapshot consolidado — ideal para validar o fluxo completo do orquestrador logo após a instalação.
+
+### Tipos principais
+- `SimulationScenario`: descreve o nome opcional, participantes e a lista ordenada de `SimulationStep` executados.
+- `SimulationAction`: união tipada que cobre `publish`, `ingest`, `proposal`, `vote`, `digest`, `snapshot`, `sync`, `assistance`, `ledger:transfer` e `wait`.
+- `SimulationReport`: resumo final com estatísticas agregadas (`SimulationStats`), logs de cada passo, propostas abertas e identidades utilizadas nas ingestões externas.
+- `SimulationAbortSignal`: interface minimalista (`{ aborted?: boolean }`) aceita em `SimulationOptions.signal` para cancelar execuções em andamento.
+- `IncomingContentStatus`: enumeração literal (`'accepted' | 'duplicate' | 'invalid'`) retornada por `ingestContent`.
 
 ## CLI (`packages/cli`)
 

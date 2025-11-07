@@ -1,18 +1,20 @@
-# BEFREE OS
+# BEFREE
 
-Rede Social P2P + IA pessoal (JARBAS) + Economia descentralizada (FREE Token)
+Rede Social P2P + IA pessoal (JARBAS) + Economia descentralizada (BFR Token)
 
 Autoria: Marcelo Scapin Rovani & Comunidade BEFREE
 Licença: AGPL v3 / Commons Clause
 
 ## Visão Geral
-BEFREE OS é um ecossistema social descentralizado que integra:
+BEFREE é um ecossistema social descentralizado que integra:
 - IA pessoal embarcada (JARBAS);
 - Infraestrutura P2P (libp2p + IPFS + GunDB);
-- Economia tokenizada (FREE);
+- Economia tokenizada (BFR);
 - Identidade digital soberana (DID + wallet).
 
-Este repositório traz uma implementação mínima funcional do SDK que permite testar a jornada básica de criação de identidade, troca de mensagens P2P em memória, reputação local e movimentação simbólica do token FREE.
+Este repositório traz uma implementação mínima funcional do SDK que permite testar a jornada básica de criação de identidade, troca de mensagens P2P em memória, reputação local e movimentação simbólica do token BFR.
+
+> **Atualização de marca:** o ecossistema adota oficialmente o nome BEFREE e o token nativo `BFR`. Interfaces podem referenciar "free credits" de forma coloquial, mas toda a documentação, governança e integrações on-chain utilizam o ticker `BFR` para evitar colisões de mercado com ativos existentes.
 
 ## Estrutura do Monorepo
 ```
@@ -29,7 +31,7 @@ befree-os/
 │   ├── content/
 │   └── reputation/
 ├── contracts/
-│   ├── FREE.sol
+│   ├── BFR.sol
 │   ├── ElasticIssuance.sol
 │   ├── Treasury.sol
 │   ├── FlagRegistry.sol
@@ -58,7 +60,7 @@ befree-os/
 - **Analytics:** digest diário das publicações com tendências de tags, pulsações de autores, intenções dominantes e palavras-chave destacadas.
 - **Automação:** engine de tarefas reativas e jobs recorrentes que disparam ações a partir de publicações, votos, reputação, ledger e digest analíticos.
 - **Telemetria:** coletor em memória com contadores, gauges, histogramas e eventos recentes para inspecionar o desempenho dos pipelines, sincronia de feeds, governança e automações.
-- **Orquestração:** pipeline integrado que conecta identidade, reputação, economia e IA em transmissões P2P assinadas, com diário local de publicações e inbox sincronizável.
+- **Simulação:** cenários roteirizados que combinam publicações, ingestão de conteúdo externo, governança, digest analítico e transferências simbólicas para testar fluxos da comunidade em ciclos rápidos.
 
 ## CLI
 Instale dependências e linke o CLI:
@@ -96,7 +98,6 @@ const orchestrator = createCommunityOrchestrator({
   storage: './.befree/orchestrator.json',
   autosaveIntervalMs: 10_000,
 });
-const orchestrator = createCommunityOrchestrator({ defaultReward: 5, rewardMemo: 'Curadoria diária' });
 
 await orchestrator.start();
 await orchestrator.publishContent(
@@ -165,6 +166,8 @@ await orchestrator.saveState();
 
 O campo `storage` aceita um caminho para arquivo (usando o adaptador de disco padrão) ou um adaptador customizado que implemente `load()`/`save()`. Com `autosaveIntervalMs` definido, o orquestrador grava o estado consolidado em intervalos regulares e também após publicações, recebimentos ou limpezas de inbox.
 
+Para ingestões manuais (conteúdos assinados vindos de integrações externas ou simulações), utilize `orchestrator.ingestContent(envelope)` — o retorno indica se o envelope foi aceito, duplicado ou rejeitado.
+
 ### Observando métricas em tempo real
 
 O orquestrador expõe um coletor de telemetria interno (`getTelemetry()`) e snapshots serializáveis (`getTelemetrySnapshot()`) que incluem:
@@ -178,9 +181,33 @@ Esses dados podem ser usados para dashboards ou alertas rápidos enquanto jobs e
 
 Tarefas cadastradas com `registerAutomationTask` recebem o evento disparador (como `content:published`, `governance:proposal:closed` ou `analytics:digest`) e podem manter estado interno via `context.setState`. Jobs recorrentes criados por `scheduleAutomationJob` ou `scheduleDigest` executam funções assíncronas em intervalos configuráveis, emitindo eventos `automation:log` a cada execução ou falha.
 
-// Exportar instantâneo consolidado (autor, reputação, feed, inbox e ledger)
-console.log(await orchestrator.snapshot());
+## Simulação comunitária
+
+Teste fluxos completos da comunidade sem depender de usuários reais utilizando o módulo `sdk/simulation`. O utilitário `runSimulation` recebe o orquestrador e um cenário com passos roteirizados (publicações locais, ingestão de conteúdos externos, governança, digest e transferências simbólicas):
+
+```ts
+import { createCommunityOrchestrator } from '../sdk/platform';
+import { runSimulation, createSampleScenario } from '../sdk/simulation';
+
+const orchestrator = createCommunityOrchestrator({
+  defaultReward: 3,
+  rewardMemo: 'Teste de fluxo',
+});
+
+const report = await runSimulation(orchestrator, createSampleScenario(), {
+  iterations: 2,
+  onStep: (step) => {
+    const label = step.label ?? step.action.type;
+    console.log(`[${step.iteration}] ${label}`, step.error ?? step.result);
+  },
+});
+
+console.log(report.stats);
+console.log(report.proposals);
+console.table(report.participants);
 ```
+
+Personalize os cenários adicionando passos com `type: 'ingest'` (para simular publicações assinadas por identidades fictícias), `type: 'vote'` (votos de participantes externos) ou `type: 'ledger:transfer'` (emissões do tesouro). Ajuste `iterations` e `delayMultiplier` para repetir ciclos com pausas artificiais.
 
 ## Desenvolvimento
 ```bash
