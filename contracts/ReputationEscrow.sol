@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.20;
 
-import "./FREE.sol";
+import "./BFR.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
 contract ReputationEscrow is AccessControl {
-    FREE public token;
+    BFR public token;
     mapping(address => uint256) public stakeOf;
 
     event Staked(address indexed user, uint256 amount);
     event Unstaked(address indexed user, uint256 amount);
 
     constructor(address token_) {
-        token = FREE(token_);
+        token = BFR(token_);
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
