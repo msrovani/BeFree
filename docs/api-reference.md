@@ -248,4 +248,25 @@ Retorna um cenário de exemplo com publicações, ingestão simulada, geração 
 
 ## CLI (`packages/cli`)
 
-Comando `befree` com subcomandos para criar/visualizar identidades e registrar transferências.
+Comando `befree` com subcomandos para criar/visualizar identidades, registrar transferências e orquestrar
+simulações roteirizadas conectadas ao diretório local `~/.befree`.
+
+### `simulation:run`
+
+Executa cenários JSON (ou módulos JS/TS) com suporte a múltiplas iterações, delays customizados e logs verbosos.
+O runner restaura automaticamente o último estado salvo em `~/.befree/simulation-state.json` para permitir
+continuidade entre execuções e grava um novo snapshot ao final.
+
+| Flag | Descrição |
+| ---- | --------- |
+| `--iterations <n>` | Define quantas vezes o cenário será repetido antes de gerar o relatório final. |
+| `--delay <fator>` | Multiplica todos os `delayMs` do cenário para acelerar ou desacelerar a simulação. |
+| `--json` | Imprime o relatório completo (logs, estatísticas, snapshot e metadados de persistência) em JSON. |
+| `--verbose` | Escreve cada passo executado no stdout conforme o runner avança. |
+| `--state <arquivo>` | Usa um arquivo de estado específico (absoluto ou relativo) em vez do padrão em `~/.befree`. |
+| `--reset` | Ignora o estado persistido e inicializa o runner com buffers vazios. |
+| `--no-persist` | Evita gravar o snapshot atualizado ao término da execução. |
+
+O relatório retornado pelo runner expõe `snapshot` (feeds, inbox, ledger e propostas) e `state`
+(incluindo identidade e assinaturas conhecidas) para que integradores possam serializar o resultado em bancos
+de dados, IPFS ou replicar o progresso em múltiplas máquinas.

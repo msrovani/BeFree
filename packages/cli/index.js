@@ -8,6 +8,7 @@ const { runScenario, createSampleScenario } = require('./simulator');
 const DATA_DIR = join(process.env.HOME ?? process.cwd(), '.befree');
 const IDENTITY_FILE = join(DATA_DIR, 'identity.json');
 const LEDGER_FILE = join(DATA_DIR, 'ledger.json');
+const SIMULATION_STATE_FILE = join(DATA_DIR, 'simulation-state.json');
 
 const ensureDataDir = () => {
   if (!existsSync(DATA_DIR)) {
@@ -33,6 +34,26 @@ const loadLedger = () => {
 const saveLedger = (ledger) => {
   ensureDataDir();
   writeFileSync(LEDGER_FILE, JSON.stringify(ledger, null, 2));
+};
+
+const loadSimulationState = (filePath = SIMULATION_STATE_FILE) => {
+  const absolute = toAbsolutePath(filePath);
+  if (!existsSync(absolute)) return undefined;
+  const parsed = JSON.parse(readFileSync(absolute, 'utf-8'));
+  if (parsed && typeof parsed === 'object') {
+    return parsed.state ?? parsed;
+  }
+  return undefined;
+};
+
+const saveSimulationState = (state, filePath = SIMULATION_STATE_FILE, metadata = {}) => {
+  ensureDataDir();
+  const payload = {
+    savedAt: new Date().toISOString(),
+    state,
+    ...metadata,
+  };
+  writeFileSync(toAbsolutePath(filePath), JSON.stringify(payload, null, 2));
 };
 
 const recordTransfer = (from, to, amount, memo) => {
@@ -144,14 +165,32 @@ const commands = {
       throw new Error('O parâmetro --delay deve ser um número válido.');
     }
 
+    const stateFile = flags.state ? toAbsolutePath(flags.state) : SIMULATION_STATE_FILE;
+    const initialState = flags.reset ? undefined : loadSimulationState(stateFile);
+
     const report = await runScenario(scenario, {
       iterations,
       delayMultiplier,
       verbose: Boolean(flags.verbose || flags.logs),
+      simulatorOptions: { state: initialState },
     });
 
+    if (!flags['no-persist']) {
+      saveSimulationState(report.state, stateFile, {
+        scenario: report.scenario,
+        iterations: report.iterations,
+        stats: report.stats,
+      });
+    }
+
     if (flags.json) {
-      console.log(format(report));
+      const enriched = {
+        ...report,
+        stateFile,
+        persisted: !flags['no-persist'],
+        restored: Boolean(initialState),
+      };
+      console.log(format(enriched));
       return;
     }
 
@@ -162,6 +201,8 @@ const commands = {
       participants: report.participants.length,
       proposals: report.proposals.length,
       stats: report.stats,
+      restoredState: Boolean(initialState),
+      persistedState: flags['no-persist'] ? false : stateFile,
     };
 
     const recentLogs = report.logs
@@ -206,7 +247,10 @@ const commands = {
         '  --iterations <n>   Repetições do cenário (default 1)\n' +
         '  --delay <fator>    Multiplica delays do cenário\n' +
         '  --json             Exibe o relatório completo em JSON\n' +
-        '  --verbose          Mostra logs de cada etapa durante a execução\n'
+        '  --verbose          Mostra logs de cada etapa durante a execução\n' +
+        '  --state <arquivo>  Define arquivo de estado (default ~/.befree/simulation-state.json)\n' +
+        '  --reset            Ignora estado salvo e inicia simulação limpa\n' +
+        '  --no-persist       Não salva o estado ao final da execução\n'
     );
   },
 };

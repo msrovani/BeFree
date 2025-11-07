@@ -7,6 +7,8 @@ const { summarize, extractKeywords, detectIntent } = require('./lib/ai');
 
 const encoder = new TextEncoder();
 
+const deepClone = (value) => (value == null ? value : JSON.parse(JSON.stringify(value)));
+
 const wait = async (ms) => {
   if (!ms || ms <= 0) return;
   await new Promise((resolve) => setTimeout(resolve, ms));
@@ -32,6 +34,10 @@ class CommunitySimulator {
     this.ledger = [];
     this.proposals = [];
     this.proposalCounter = 0;
+
+    if (options.state) {
+      this.importState(options.state);
+    }
   }
 
   get author() {
@@ -159,12 +165,38 @@ class CommunitySimulator {
 
   snapshot() {
     return {
-      author: this.author,
-      published: [...this.published],
-      inbox: [...this.inbox],
-      ledger: [...this.ledger],
-      proposals: [...this.proposals],
+      author: deepClone(this.author),
+      published: deepClone(this.published) ?? [],
+      inbox: deepClone(this.inbox) ?? [],
+      ledger: deepClone(this.ledger) ?? [],
+      proposals: deepClone(this.proposals) ?? [],
     };
+  }
+
+  exportState() {
+    return {
+      identity: deepClone(this.identity),
+      published: deepClone(this.published) ?? [],
+      inbox: deepClone(this.inbox) ?? [],
+      ledger: deepClone(this.ledger) ?? [],
+      proposals: deepClone(this.proposals) ?? [],
+      seenSignatures: [...this.seenSignatures],
+      proposalCounter: this.proposalCounter,
+    };
+  }
+
+  importState(state = {}) {
+    if (state.identity) {
+      this.identity = deepClone(state.identity);
+    }
+    this.published = Array.isArray(state.published) ? deepClone(state.published) : [];
+    this.inbox = Array.isArray(state.inbox) ? deepClone(state.inbox) : [];
+    this.ledger = Array.isArray(state.ledger) ? deepClone(state.ledger) : [];
+    this.proposals = Array.isArray(state.proposals) ? deepClone(state.proposals) : [];
+    this.seenSignatures = new Set(Array.isArray(state.seenSignatures) ? state.seenSignatures : []);
+    this.proposalCounter = Number.isFinite(state.proposalCounter)
+      ? Number(state.proposalCounter)
+      : Math.max(0, this.proposals.length);
   }
 
   syncFeed(options = {}) {
@@ -454,6 +486,8 @@ const runScenario = async (scenario, options = {}) => {
     logs,
     proposals,
     participants: participantsList,
+    snapshot: simulator.snapshot(),
+    state: simulator.exportState(),
   };
 };
 

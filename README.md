@@ -91,7 +91,18 @@ befree simulation:run --iterations 2 --delay 0.5
 
 # Executar um cenário customizado definido em arquivo e imprimir relatório completo
 befree simulation:run ./docs/samples/community-sprint.json --json
+
+# Reutilizar estado salvo em um arquivo específico
+befree simulation:run --state ./tmp/sprint.json
+
+# Reiniciar a simulação descartando snapshots anteriores
+befree simulation:run --reset --no-persist
 ```
+
+Por padrão o comando `simulation:run` restaura e salva o estado no arquivo `~/.befree/simulation-state.json`,
+permitindo continuar ciclos comunitários em múltiplas execuções. Utilize `--state <arquivo>` para escolher um
+local customizado, `--reset` para iniciar do zero ignorando o arquivo e `--no-persist` caso não deseje gravar o novo
+snapshot ao final.
 
 ## Orquestração rápida
 
