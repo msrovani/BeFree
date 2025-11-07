@@ -253,9 +253,9 @@ simulações roteirizadas conectadas ao diretório local `~/.befree`.
 
 ### `simulation:run`
 
-Executa cenários JSON (ou módulos JS/TS) com suporte a múltiplas iterações, delays customizados e logs verbosos.
-O runner restaura automaticamente o último estado salvo em `~/.befree/simulation-state.json` para permitir
-continuidade entre execuções e grava um novo snapshot ao final.
+Executa cenários JSON (ou módulos JS/TS) com suporte a múltiplas iterações, delays customizados, presets embutidos
+e logs verbosos. O runner restaura automaticamente o último estado salvo em `~/.befree/simulation-state.json` para
+permitir continuidade entre execuções e grava um novo snapshot ao final.
 
 | Flag | Descrição |
 | ---- | --------- |
@@ -266,7 +266,13 @@ continuidade entre execuções e grava um novo snapshot ao final.
 | `--state <arquivo>` | Usa um arquivo de estado específico (absoluto ou relativo) em vez do padrão em `~/.befree`. |
 | `--reset` | Ignora o estado persistido e inicializa o runner com buffers vazios. |
 | `--no-persist` | Evita gravar o snapshot atualizado ao término da execução. |
+| `--preset <nome>` | Carrega um preset embutido (`sample`, `community-sprint`, `p2p-sync`) sem precisar informar o arquivo. |
+| `--list-presets` | Lista os presets disponíveis e encerra o comando imediatamente. |
+| `--participants a,b` | Gera destaques para ids/DIDs/rótulos informados no relatório (útil para auditorias focadas). |
+| `--log-file <path>` | Exporta todos os logs (`SimulationLogEntry[]`) para JSON e cria diretórios automaticamente. |
 
-O relatório retornado pelo runner expõe `snapshot` (feeds, inbox, ledger e propostas) e `state`
-(incluindo identidade e assinaturas conhecidas) para que integradores possam serializar o resultado em bancos
-de dados, IPFS ou replicar o progresso em múltiplas máquinas.
+Além das estatísticas globais (`stats`), o relatório inclui `actors`: lista com o anfitrião e cada participante.
+Cada entrada registra contadores de publicações, ingestões, votos, digests, snapshots, sincronizações, assistências,
+transferências e erros associados. O array `logs` também adiciona o campo `actor` com o responsável pelo passo.
+Por fim, `snapshot` (feeds, inbox, ledger, propostas) e `state` (identidade, assinaturas conhecidas e buffers)
+seguem disponíveis para serialização em bancos de dados, IPFS ou replicação multi-máquina.

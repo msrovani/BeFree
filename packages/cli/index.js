@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 const { mkdirSync, readFileSync, writeFileSync, existsSync } = require('fs');
-const { join, resolve, isAbsolute } = require('path');
+const { join, resolve, isAbsolute, dirname } = require('path');
 
 const { createIdentity } = require('./lib/identity');
 const { runScenario, createSampleScenario } = require('./simulator');
@@ -9,6 +9,11 @@ const DATA_DIR = join(process.env.HOME ?? process.cwd(), '.befree');
 const IDENTITY_FILE = join(DATA_DIR, 'identity.json');
 const LEDGER_FILE = join(DATA_DIR, 'ledger.json');
 const SIMULATION_STATE_FILE = join(DATA_DIR, 'simulation-state.json');
+
+const PRESET_FILES = {
+  'community-sprint': join(__dirname, '..', 'docs', 'samples', 'community-sprint.json'),
+  'p2p-sync': join(__dirname, '..', 'docs', 'samples', 'p2p-sync.json'),
+};
 
 const ensureDataDir = () => {
   if (!existsSync(DATA_DIR)) {
@@ -74,6 +79,17 @@ const format = (value) => JSON.stringify(value, null, 2);
 
 const toAbsolutePath = (value) => (isAbsolute(value) ? value : resolve(process.cwd(), value));
 
+const parseListFlag = (value) => {
+  if (!value) return [];
+  if (Array.isArray(value)) {
+    return value.flatMap((entry) => String(entry).split(',')).map((entry) => entry.trim()).filter(Boolean);
+  }
+  return String(value)
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+};
+
 const parseArgVector = (vector) => {
   const positional = [];
   const flags = {};
@@ -107,6 +123,24 @@ const loadScenarioFromFile = (filePath) => {
   const loaded = require(absolute);
   const scenario = loaded.default ?? loaded.scenario ?? loaded;
   return typeof scenario === 'function' ? scenario() : scenario;
+};
+
+const loadPresetScenario = (name) => {
+  if (!name) return undefined;
+  if (name === 'sample' || name === 'amostra') {
+    return createSampleScenario();
+  }
+  const presetPath = PRESET_FILES[name];
+  if (presetPath && existsSync(presetPath)) {
+    return JSON.parse(readFileSync(presetPath, 'utf-8'));
+  }
+  return undefined;
+};
+
+const findActorByQuery = (actors, query) => {
+  return actors.find(
+    (actor) => actor.id === query || actor.did === query || (actor.label && actor.label === query)
+  );
 };
 
 const command = process.argv[2];
@@ -143,9 +177,19 @@ const commands = {
   },
   'simulation:run': async () => {
     const { positional, flags } = parseArgVector(args);
+    if (flags['list-presets']) {
+      const presets = ['sample', ...Object.keys(PRESET_FILES)];
+      console.log(format({ presets }));
+      return;
+    }
+
+    const reference = flags.preset ?? positional[0];
     const scenario = (() => {
-      const reference = positional[0];
-      if (!reference || reference === 'sample' || reference === 'amostra') {
+      const preset = loadPresetScenario(reference);
+      if (preset) {
+        return preset;
+      }
+      if (!reference) {
         return createSampleScenario();
       }
       return loadScenarioFromFile(reference);
@@ -175,6 +219,27 @@ const commands = {
       simulatorOptions: { state: initialState },
     });
 
+    let savedLogPath;
+    if (flags['log-file']) {
+      const target = toAbsolutePath(flags['log-file']);
+      mkdirSync(dirname(target), { recursive: true });
+      writeFileSync(target, JSON.stringify(report.logs, null, 2));
+      savedLogPath = target;
+    }
+
+    const highlightQueries = parseListFlag(flags.participants ?? flags.participant);
+    const highlights = highlightQueries.map((query) => {
+      const actor = findActorByQuery(report.actors ?? [], query);
+      if (!actor) {
+        return { query, found: false };
+      }
+      return {
+        query,
+        found: true,
+        actor,
+      };
+    });
+
     if (!flags['no-persist']) {
       saveSimulationState(report.state, stateFile, {
         scenario: report.scenario,
@@ -189,6 +254,8 @@ const commands = {
         stateFile,
         persisted: !flags['no-persist'],
         restored: Boolean(initialState),
+        highlights,
+        logFile: savedLogPath,
       };
       console.log(format(enriched));
       return;
@@ -201,6 +268,7 @@ const commands = {
       participants: report.participants.length,
       proposals: report.proposals.length,
       stats: report.stats,
+      atores: (report.actors ?? []).length,
       restoredState: Boolean(initialState),
       persistedState: flags['no-persist'] ? false : stateFile,
     };
@@ -224,6 +292,17 @@ const commands = {
         error: entry.error,
       }));
 
+    const destaqueEncontrado = highlights
+      .filter((entry) => entry.found)
+      .map((entry) => ({
+        id: entry.actor.id,
+        role: entry.actor.role,
+        label: entry.actor.label,
+        stats: entry.actor.stats,
+      }));
+
+    const destaqueNaoEncontrado = highlights.filter((entry) => !entry.found).map((entry) => entry.query);
+
     console.log(
       format({
         message: 'Simulação concluída',
@@ -231,6 +310,9 @@ const commands = {
         erros: errorDetails.length,
         errosDetalhados: errorDetails.slice(0, 5),
         ultimosPassos: recentLogs,
+        destaques: destaqueEncontrado,
+        destaquesNaoEncontrados: destaqueNaoEncontrado,
+        logsSalvosEm: savedLogPath,
       })
     );
   },
@@ -250,7 +332,11 @@ const commands = {
         '  --verbose          Mostra logs de cada etapa durante a execução\n' +
         '  --state <arquivo>  Define arquivo de estado (default ~/.befree/simulation-state.json)\n' +
         '  --reset            Ignora estado salvo e inicia simulação limpa\n' +
-        '  --no-persist       Não salva o estado ao final da execução\n'
+        '  --no-persist       Não salva o estado ao final da execução\n' +
+        '  --preset <nome>    Usa um preset embutido (sample, community-sprint, p2p-sync)\n' +
+        '  --list-presets     Lista presets disponíveis e encerra\n' +
+        '  --participants a,b Destaca participantes (id, DID ou rótulo) no relatório\n' +
+        '  --log-file <path>  Exporta todos os logs da execução para um arquivo JSON\n'
     );
   },
 };

@@ -14,6 +14,20 @@ const wait = async (ms) => {
   await new Promise((resolve) => setTimeout(resolve, ms));
 };
 
+const createActorCounters = () => ({
+  published: 0,
+  ingested: 0,
+  proposals: 0,
+  votes: 0,
+  digests: 0,
+  snapshots: 0,
+  syncs: 0,
+  assistance: 0,
+  transfers: 0,
+  waits: 0,
+  errors: 0,
+});
+
 const cloneManifest = (manifest) => ({
   title: manifest.title,
   description: manifest.description,
@@ -295,7 +309,59 @@ const runScenario = async (scenario, options = {}) => {
   const iterations = Math.max(1, Math.trunc(options.iterations ?? 1));
   const delayFactor = options.delayMultiplier ?? 1;
   const startedAt = Date.now();
+  const actors = new Map();
   let lastProposalId;
+
+  const hostActorId = simulator.identity?.did ?? 'befree-host';
+  const ensureActor = (id, metadata = {}) => {
+    if (!id) return undefined;
+    const key = String(id);
+    const existing = actors.get(key);
+    if (existing) {
+      if (!existing.label && metadata.label) existing.label = metadata.label;
+      if (!existing.did && metadata.did) existing.did = metadata.did;
+      if (!existing.wallet && metadata.wallet) existing.wallet = metadata.wallet;
+      if (!existing.role && metadata.role) existing.role = metadata.role;
+      return existing;
+    }
+    const next = {
+      id: key,
+      role: metadata.role,
+      label: metadata.label,
+      did: metadata.did,
+      wallet: metadata.wallet,
+      stats: createActorCounters(),
+    };
+    actors.set(key, next);
+    return next;
+  };
+
+  const incrementActor = (id, metric, metadata = {}) => {
+    const actor = ensureActor(id, metadata);
+    if (!actor) return;
+    if (typeof actor.stats[metric] !== 'number') {
+      actor.stats[metric] = 0;
+    }
+    actor.stats[metric] += 1;
+  };
+
+  ensureActor(hostActorId, {
+    role: 'host',
+    label: simulator.identity?.label ?? 'Orquestrador',
+    did: simulator.identity?.did,
+    wallet: simulator.identity?.wallet,
+  });
+
+  const getParticipant = (id) => {
+    const participant = ensureParticipant(id, participants, scenario.participants);
+    ensureActor(participant.id, {
+      role: 'participant',
+      label: participant.label,
+      did: participant.identity.did,
+      wallet: participant.identity.wallet,
+    });
+    return participant;
+  };
 
   const logStep = options.onStep
     ? options.onStep
@@ -332,6 +398,7 @@ const runScenario = async (scenario, options = {}) => {
         index,
         label: step.label,
         action: step.action,
+        actor: hostActorId,
         startedAt: startedStep,
         finishedAt: startedStep,
         durationMs: 0,
@@ -342,26 +409,30 @@ const runScenario = async (scenario, options = {}) => {
           case 'publish': {
             const envelope = await simulator.publish(step.action.manifest, step.action.body);
             stats.published += 1;
+            incrementActor(hostActorId, 'published');
             result = { signature: envelope.signature, timestamp: envelope.timestamp };
             break;
           }
           case 'ingest': {
-            const participant = ensureParticipant(
-              step.action.participantId,
-              participants,
-              scenario.participants
-            );
+            const participant = getParticipant(step.action.participantId);
             const envelope = await forgeEnvelope(step.action.manifest, step.action.body, participant.identity);
             const status = await simulator.ingest(envelope, step.action.sourcePeer ?? participant.id);
             if (status === 'accepted') {
               stats.ingested += 1;
+              incrementActor(participant.id, 'ingested', {
+                label: participant.label,
+                did: participant.identity.did,
+                wallet: participant.identity.wallet,
+              });
             }
+            logEntry.actor = participant.id;
             result = { status, signature: envelope.signature };
             break;
           }
           case 'proposal': {
             const proposal = simulator.createProposal(step.action.draft, { activate: step.action.activate });
             stats.proposals += 1;
+            incrementActor(hostActorId, 'proposals');
             proposals.push(proposal.id);
             lastProposalId = proposal.id;
             if (step.action.autoVote) {
@@ -371,14 +442,24 @@ const runScenario = async (scenario, options = {}) => {
                 }
                 return proposal.options[0]?.id;
               })();
+              const autoParticipant = step.action.autoVote.participantId
+                ? getParticipant(step.action.autoVote.participantId)
+                : undefined;
               simulator.voteOnProposal(proposal.id, {
                 choice: targetOption,
-                voter: step.action.autoVote.participantId
-                  ? ensureParticipant(step.action.autoVote.participantId, participants, scenario.participants).identity.did
-                  : undefined,
+                voter: autoParticipant ? autoParticipant.identity.did : undefined,
                 comment: step.action.autoVote.comment,
               });
               stats.votes += 1;
+              if (autoParticipant) {
+                incrementActor(autoParticipant.id, 'votes', {
+                  label: autoParticipant.label,
+                  did: autoParticipant.identity.did,
+                  wallet: autoParticipant.identity.wallet,
+                });
+              } else {
+                incrementActor(hostActorId, 'votes');
+              }
             }
             result = { id: proposal.id, status: proposal.status };
             break;
@@ -402,45 +483,61 @@ const runScenario = async (scenario, options = {}) => {
               : typeof step.action.choiceIndex === 'number'
               ? proposal.options[step.action.choiceIndex]?.id
               : proposal.options[0]?.id;
-            const voterDid = step.action.participantId
-              ? ensureParticipant(step.action.participantId, participants, scenario.participants).identity.did
+            const voterParticipant = step.action.participantId
+              ? getParticipant(step.action.participantId)
               : undefined;
+            const voterDid = voterParticipant ? voterParticipant.identity.did : undefined;
             const record = simulator.voteOnProposal(proposal.id, {
               choice: choiceId,
               voter: voterDid,
               comment: step.action.comment,
             });
             stats.votes += 1;
+            if (voterParticipant) {
+              logEntry.actor = voterParticipant.id;
+              incrementActor(voterParticipant.id, 'votes', {
+                label: voterParticipant.label,
+                did: voterParticipant.identity.did,
+                wallet: voterParticipant.identity.wallet,
+              });
+            } else {
+              incrementActor(hostActorId, 'votes');
+            }
             result = { proposalId: proposal.id, voter: record.voter };
             break;
           }
           case 'digest': {
             const digest = simulator.generateDigest(step.action.options ?? {});
             stats.digests += 1;
+            incrementActor(hostActorId, 'digests');
             result = { posts: digest.feed.total, authors: digest.feed.uniqueAuthors };
             break;
           }
           case 'snapshot': {
             const snapshot = simulator.snapshot();
             stats.snapshots += 1;
+            incrementActor(hostActorId, 'snapshots');
             result = { published: snapshot.published.length, inbox: snapshot.inbox.length };
             break;
           }
           case 'sync': {
             const entries = simulator.syncFeed(step.action.options ?? {});
             stats.syncs += 1;
+            incrementActor(hostActorId, 'syncs');
             result = { received: entries.length };
             break;
           }
           case 'assistance': {
             const assistance = await simulator.requestAssistance(step.action.text);
             stats.assistance += 1;
+            incrementActor(hostActorId, 'assistance');
             result = assistance;
             break;
           }
           case 'ledger:transfer': {
             const receipt = simulator.recordTransfer(step.action.to, step.action.amount, step.action.memo);
             stats.transfers += 1;
+            incrementActor(hostActorId, 'transfers');
             result = { tx: receipt.tx, to: receipt.to, amount: receipt.amount };
             break;
           }
@@ -448,6 +545,7 @@ const runScenario = async (scenario, options = {}) => {
             const waitMs = Math.max(0, Math.round(step.action.durationMs * delayFactor));
             await wait(waitMs);
             stats.waits += 1;
+            incrementActor(hostActorId, 'waits');
             result = { waitedMs: waitMs };
             break;
           }
@@ -458,6 +556,9 @@ const runScenario = async (scenario, options = {}) => {
       } catch (error) {
         stats.errors += 1;
         logEntry.error = error instanceof Error ? error.message : String(error);
+        if (logEntry.actor) {
+          incrementActor(logEntry.actor, 'errors');
+        }
       } finally {
         logEntry.finishedAt = Date.now();
         logEntry.durationMs = logEntry.finishedAt - startedStep;
@@ -475,6 +576,16 @@ const runScenario = async (scenario, options = {}) => {
     did: participant.identity.did,
     wallet: participant.identity.wallet,
     label: participant.label,
+    stats: actors.get(participant.id)?.stats ? { ...actors.get(participant.id).stats } : createActorCounters(),
+  }));
+
+  const actorSummaries = [...actors.values()].map((record) => ({
+    id: record.id,
+    role: record.role ?? (record.id === hostActorId ? 'host' : 'participant'),
+    label: record.label,
+    did: record.did,
+    wallet: record.wallet,
+    stats: { ...record.stats },
   }));
 
   return {
@@ -486,6 +597,7 @@ const runScenario = async (scenario, options = {}) => {
     logs,
     proposals,
     participants: participantsList,
+    actors: actorSummaries,
     snapshot: simulator.snapshot(),
     state: simulator.exportState(),
   };
