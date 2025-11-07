@@ -88,6 +88,17 @@ Recupera uma proposta específica com votos e desfecho (quando encerrada).
 ### `exportGovernanceState()` / `importGovernanceState(state?)`
 Serializam e restauram o estado completo de propostas, votos e resultados para persistência.
 
+## Analytics (`sdk/analytics`)
+
+### `computeTagTrends(feed, inbox?, options?)`
+Calcula tendências de tags considerando o feed publicado e o inbox recebido dentro de uma janela temporal. Retorna lista com tag, contagem, peso decaído por recência e último timestamp observado.
+
+### `buildCommunityDigest(feed, inbox?, options?)`
+Gera um digest comunitário com totais de publicações, autores únicos, tendências de tags, pulsações de autores (com reputação opcional) e destaques (intenções dominantes, palavras-chave e resumo extraído dos conteúdos mais recentes). `options` aceita `windowMs`, `topTags`, `topAuthors`, `includeInbox`, além de injetar funções de resumo/palavras-chave personalizadas.
+
+### `DigestOptions` / `CommunityDigest`
+Interfaces que descrevem, respectivamente, as opções de cálculo de digest e o formato de retorno estruturado do relatório.
+
 ## Orquestração (`sdk/platform`)
 
 ### `new CommunityOrchestrator(options?)`
@@ -137,6 +148,9 @@ Manipulam o status da proposta e emitem eventos específicos (`governance:propos
 
 ### `orchestrator.syncFeed(options?)`
 Dispara uma requisição P2P para recuperar novas publicações de outros orquestradores e preenche o inbox local. Retorna somente os envelopes inéditos recebidos.
+
+### `orchestrator.generateDigest(options?)`
+Gera um digest estruturado das interações recentes, combinando feed publicado e inbox (quando habilitado). O resultado inclui tendências de tags, autores mais ativos com seus pulsos ponderados, intenções detectadas e um resumo sintético dos conteúdos destacados. Emite evento `analytics:digest` após o cálculo.
 
 ### `orchestrator.snapshot()`
 Gera um instantâneo consolidado com autor, feed publicado, inbox, histórico do ledger, reputação atual e todas as propostas registradas (incluindo votos e desfecho quando houver).

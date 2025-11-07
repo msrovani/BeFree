@@ -55,6 +55,7 @@ befree-os/
 - **Reputação:** registro de eventos com decaimento exponencial e ranking local.
 - **Orquestração:** pipeline integrado que conecta identidade, reputação, economia e IA em transmissões P2P assinadas, com diário local de publicações, inbox sincronizável e persistência opcional em disco.
 - **Governança:** propostas colaborativas, votação ponderada, cálculo de quórum e arquivamento automático das decisões no snapshot do orquestrador.
+- **Analytics:** digest diário das publicações com tendências de tags, pulsações de autores, intenções dominantes e palavras-chave destacadas.
 
 ## CLI
 Instale dependências e linke o CLI:
@@ -131,6 +132,9 @@ console.log(await orchestrator.getGovernanceProposals());
 
 // Exportar instantâneo consolidado (autor, reputação, feed, inbox, ledger e governança)
 console.log(await orchestrator.snapshot());
+
+// Gerar digest analítico (tendências de tags, autores ativos, intenções e resumo)
+console.log(await orchestrator.generateDigest({ windowMs: 1000 * 60 * 60 * 12 }));
 
 // Persistir estado sob demanda (além do autosave)
 await orchestrator.saveState();

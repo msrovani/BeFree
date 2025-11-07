@@ -43,6 +43,8 @@ import {
   VoteInput as GovernanceVoteInput,
   SerializedGovernanceState,
 } from '../governance';
+import { buildCommunityDigest } from '../analytics';
+import type { DigestOptions, CommunityDigest } from '../analytics';
 
 const encoder = new TextEncoder();
 
@@ -594,6 +596,16 @@ export class CommunityOrchestrator extends EventEmitter {
     }
   }
 
+  async generateDigest(options: DigestOptions = {}): Promise<CommunityDigest> {
+    await this.ensureRestored();
+    const digest = await buildCommunityDigest(this.getPublishedFeed(), this.getInbox(), {
+      ...options,
+      reputationResolver: options.reputationResolver ?? ((did: string) => scoreFor(did)),
+    });
+    this.emit('analytics:digest', digest);
+    return digest;
+  }
+
   async snapshot(): Promise<OrchestratorSnapshot> {
     await this.ensureRestored();
     const reputation = await this.reputationScore();
@@ -621,6 +633,7 @@ export type {
   ProposalStatus,
   GovernanceVoteRecord as ProposalVoteRecord,
 } from '../governance';
+export type { CommunityDigest, DigestOptions, TagTrend, AuthorPulse } from '../analytics';
 
 const ensureDirectory = async (filePath: string) => {
   await fs.mkdir(dirname(filePath), { recursive: true });
