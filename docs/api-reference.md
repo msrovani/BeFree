@@ -248,4 +248,31 @@ Retorna um cenário de exemplo com publicações, ingestão simulada, geração 
 
 ## CLI (`packages/cli`)
 
-Comando `befree` com subcomandos para criar/visualizar identidades e registrar transferências.
+Comando `befree` com subcomandos para criar/visualizar identidades, registrar transferências e orquestrar
+simulações roteirizadas conectadas ao diretório local `~/.befree`.
+
+### `simulation:run`
+
+Executa cenários JSON (ou módulos JS/TS) com suporte a múltiplas iterações, delays customizados, presets embutidos
+e logs verbosos. O runner restaura automaticamente o último estado salvo em `~/.befree/simulation-state.json` para
+permitir continuidade entre execuções e grava um novo snapshot ao final.
+
+| Flag | Descrição |
+| ---- | --------- |
+| `--iterations <n>` | Define quantas vezes o cenário será repetido antes de gerar o relatório final. |
+| `--delay <fator>` | Multiplica todos os `delayMs` do cenário para acelerar ou desacelerar a simulação. |
+| `--json` | Imprime o relatório completo (logs, estatísticas, snapshot e metadados de persistência) em JSON. |
+| `--verbose` | Escreve cada passo executado no stdout conforme o runner avança. |
+| `--state <arquivo>` | Usa um arquivo de estado específico (absoluto ou relativo) em vez do padrão em `~/.befree`. |
+| `--reset` | Ignora o estado persistido e inicializa o runner com buffers vazios. |
+| `--no-persist` | Evita gravar o snapshot atualizado ao término da execução. |
+| `--preset <nome>` | Carrega um preset embutido (`sample`, `community-sprint`, `p2p-sync`) sem precisar informar o arquivo. |
+| `--list-presets` | Lista os presets disponíveis e encerra o comando imediatamente. |
+| `--participants a,b` | Gera destaques para ids/DIDs/rótulos informados no relatório (útil para auditorias focadas). |
+| `--log-file <path>` | Exporta todos os logs (`SimulationLogEntry[]`) para JSON e cria diretórios automaticamente. |
+
+Além das estatísticas globais (`stats`), o relatório inclui `actors`: lista com o anfitrião e cada participante.
+Cada entrada registra contadores de publicações, ingestões, votos, digests, snapshots, sincronizações, assistências,
+transferências e erros associados. O array `logs` também adiciona o campo `actor` com o responsável pelo passo.
+Por fim, `snapshot` (feeds, inbox, ledger, propostas) e `state` (identidade, assinaturas conhecidas e buffers)
+seguem disponíveis para serialização em bancos de dados, IPFS ou replicação multi-máquina.

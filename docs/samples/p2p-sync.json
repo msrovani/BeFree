@@ -1,0 +1,110 @@
+{
+  "name": "Sincronização cooperativa P2P",
+  "participants": [
+    { "id": "guardioes", "label": "Guardião da Rede" },
+    { "id": "cartografo", "label": "Cartógrafo Local" }
+  ],
+  "steps": [
+    {
+      "label": "Pulso inicial da célula",
+      "action": {
+        "type": "publish",
+        "manifest": {
+          "title": "Mapa de energia comunitária",
+          "tags": ["rede", "energia"],
+          "evidence": {
+            "creationUnix": 1730947200,
+            "cameraMake": "OpenCam",
+            "cameraModel": "OC-7",
+            "cid": "pulse-001"
+          }
+        },
+        "body": "Registro em tempo real das células conectadas e níveis de energia social."
+      }
+    },
+    {
+      "label": "Relato do guardião",
+      "action": {
+        "type": "ingest",
+        "participantId": "guardioes",
+        "manifest": {
+          "title": "Checklist de ressincronização",
+          "tags": ["sync", "resiliência"],
+          "evidence": { "creationUnix": 1730948200, "cid": "sync-guardioes" }
+        },
+        "body": "Procedimentos para recuperar nós desconectados durante tempestades solares."
+      }
+    },
+    {
+      "label": "Revisão do cartógrafo",
+      "action": {
+        "type": "ingest",
+        "participantId": "cartografo",
+        "manifest": {
+          "title": "Rotas de densidade afetiva",
+          "tags": ["cartografia", "afeto"],
+          "evidence": { "creationUnix": 1730948300, "cid": "mapa-cartografo" }
+        },
+        "body": "Traçado das rotas mais confiáveis para circulação de cuidados no bairro."
+      }
+    },
+    {
+      "label": "Sincronização rápida",
+      "action": {
+        "type": "sync",
+        "options": { "since": 0, "limit": 10 }
+      }
+    },
+    {
+      "label": "Assistência da JARBAS",
+      "action": {
+        "type": "assistance",
+        "text": "Quais riscos devo monitorar após uma tempestade solar?"
+      }
+    },
+    {
+      "label": "Proposta de coordenação",
+      "action": {
+        "type": "proposal",
+        "draft": {
+          "title": "Distribuir kits de emergência energética",
+          "description": "Alocar 200 BFR do tesouro para kits solares solidários.",
+          "options": [
+            { "label": "Aprovar distribuição" },
+            { "label": "Reavaliar logística" }
+          ]
+        },
+        "activate": true,
+        "autoVote": { "choiceIndex": 0, "participantId": "guardioes" }
+      }
+    },
+    {
+      "label": "Voto do cartógrafo",
+      "action": {
+        "type": "vote",
+        "participantId": "cartografo",
+        "choiceIndex": 1
+      }
+    },
+    {
+      "label": "Transferência simbólica",
+      "action": {
+        "type": "ledger:transfer",
+        "to": "treasury-bfr",
+        "amount": 200,
+        "memo": "Reserva emergencial de energia"
+      }
+    },
+    {
+      "label": "Digest cooperativo",
+      "action": {
+        "type": "digest",
+        "options": { "topTags": 4 }
+      }
+    },
+    {
+      "label": "Snapshot final",
+      "action": { "type": "snapshot" }
+    }
+  ]
+}
