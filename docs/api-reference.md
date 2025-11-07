@@ -242,9 +242,40 @@ Retorna um cenário de exemplo com publicações, ingestão simulada, geração 
 ### Tipos principais
 - `SimulationScenario`: descreve o nome opcional, participantes e a lista ordenada de `SimulationStep` executados.
 - `SimulationAction`: união tipada que cobre `publish`, `ingest`, `proposal`, `vote`, `digest`, `snapshot`, `sync`, `assistance`, `ledger:transfer` e `wait`.
-- `SimulationReport`: resumo final com estatísticas agregadas (`SimulationStats`), logs de cada passo, digest analítico compatível com o orquestrador, propostas abertas e identidades utilizadas nas ingestões externas.
+- `SimulationReport`: resumo final com estatísticas agregadas (`SimulationStats`), logs de cada passo, propostas abertas e identidades utilizadas nas ingestões externas.
 - `SimulationAbortSignal`: interface minimalista (`{ aborted?: boolean }`) aceita em `SimulationOptions.signal` para cancelar execuções em andamento.
 - `IncomingContentStatus`: enumeração literal (`'accepted' | 'duplicate' | 'invalid'`) retornada por `ingestContent`.
+
+## Frontend (`apps/frontend`)
+
+Protótipo Next.js com foco na experiência sensorial descrita na nota de design. Os componentes expostos são pensados
+para consumo direto em aplicações React/Next e podem ser reaproveitados em miniapps híbridos.
+
+### `TopBar`
+Renderiza a navegação principal com atalho de conexão de carteira (`useWallet`). Exibe marca BEFREE, status da rede lógica
+(`befree-holo-testnet`) e ícones principais.
+
+### `RadialFeed`
+Organiza pulsos (`Pulse`) em órbitas calculadas por `usePulseLayout`, destacando reputação, energia e assistências do Jarbas.
+Utiliza `FeedOrb` para cada entrada.
+
+### `JarbasPanel`
+Painel do assistente pessoal com os insights do módulo `useJarbasPresence`. Mostra humor, status (escutando/respondendo) e ações
+recomendadas.
+
+### `ActionDock`
+Contém `VoiceInput`, botão de novo pulse, captura de prova viva e atalho para círculos fechados. Mantém visual adaptado ao fluxo
+por voz descrito no roadmap.
+
+### Hooks utilitários
+- `usePulseLayout(pulses)`: projeta conteúdo em órbitas (`angle`, `radius`) para efeitos radiais.
+- `useJarbasPresence()`: simula batimento de presença do Jarbas enquanto insights são rotacionados.
+- `useWallet()`: stub de conexão com WalletConnect, exibindo endereço e rede.
+- `useReputationMetrics()`: agrega reputação média, pico e piso a partir dos participantes.
+
+### Dados de demonstração
+O módulo `lib/demoData` fornece pulsos, participantes, círculos e prompts de voz utilizados na tela inicial. Pode ser substituído
+por chamadas em tempo real ao orquestrador quando a ponte P2P/API estiver disponível.
 
 ## CLI (`packages/cli`)
 
@@ -253,9 +284,9 @@ simulações roteirizadas conectadas ao diretório local `~/.befree`.
 
 ### `simulation:run`
 
-Executa cenários JSON (ou módulos JS/TS) com suporte a múltiplas iterações, delays customizados e logs verbosos.
-O runner restaura automaticamente o último estado salvo em `~/.befree/simulation-state.json` para permitir
-continuidade entre execuções e grava um novo snapshot ao final.
+Executa cenários JSON (ou módulos JS/TS) com suporte a múltiplas iterações, delays customizados, presets embutidos
+e logs verbosos. O runner restaura automaticamente o último estado salvo em `~/.befree/simulation-state.json` para
+permitir continuidade entre execuções e grava um novo snapshot ao final.
 
 | Flag | Descrição |
 | ---- | --------- |
@@ -266,7 +297,13 @@ continuidade entre execuções e grava um novo snapshot ao final.
 | `--state <arquivo>` | Usa um arquivo de estado específico (absoluto ou relativo) em vez do padrão em `~/.befree`. |
 | `--reset` | Ignora o estado persistido e inicializa o runner com buffers vazios. |
 | `--no-persist` | Evita gravar o snapshot atualizado ao término da execução. |
+| `--preset <nome>` | Carrega um preset embutido (`sample`, `community-sprint`, `p2p-sync`) sem precisar informar o arquivo. |
+| `--list-presets` | Lista os presets disponíveis e encerra o comando imediatamente. |
+| `--participants a,b` | Gera destaques para ids/DIDs/rótulos informados no relatório (útil para auditorias focadas). |
+| `--log-file <path>` | Exporta todos os logs (`SimulationLogEntry[]`) para JSON e cria diretórios automaticamente. |
 
-O relatório retornado pelo runner expõe `snapshot` (feeds, inbox, ledger, reputação e governança) e `state`
-(identidade, assinaturas conhecidas e eventos de reputação) para que integradores possam serializar o resultado em bancos
-de dados, IPFS ou replicar o progresso em múltiplas máquinas mantendo o histórico de pontuação.
+Além das estatísticas globais (`stats`), o relatório inclui `actors`: lista com o anfitrião e cada participante.
+Cada entrada registra contadores de publicações, ingestões, votos, digests, snapshots, sincronizações, assistências,
+transferências e erros associados. O array `logs` também adiciona o campo `actor` com o responsável pelo passo.
+Por fim, `snapshot` (feeds, inbox, ledger, propostas) e `state` (identidade, assinaturas conhecidas e buffers)
+seguem disponíveis para serialização em bancos de dados, IPFS ou replicação multi-máquina.

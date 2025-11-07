@@ -22,7 +22,8 @@ befree-os/
 ├── apps/
 │   ├── mobile/
 │   ├── desktop/
-│   └── bootstrap/
+│   ├── bootstrap/
+│   └── frontend/
 ├── sdk/
 │   ├── p2p/
 │   ├── ai/
@@ -62,6 +63,26 @@ befree-os/
 - **Telemetria:** coletor em memória com contadores, gauges, histogramas e eventos recentes para inspecionar o desempenho dos pipelines, sincronia de feeds, governança e automações.
 - **Simulação:** cenários roteirizados que combinam publicações, ingestão de conteúdo externo, governança, digest analítico e transferências simbólicas para testar fluxos da comunidade em ciclos rápidos.
 
+## Frontend sensorial (preview)
+O diretório `apps/frontend` inaugura o protótipo da interface viva BEFREE usando Next.js 15 com foco em experiências não lineares.
+
+### Conceitos
+- **Feed radial:** conteúdos aparecem como órbitas energéticas (`FeedOrb`) organizadas por reputação e energia social.
+- **IA presente:** o painel `JarbasPanel` sinaliza humor, status e recomendações acionáveis do assistente pessoal.
+- **Economia visível:** `ReputationCard` e `CirclePanel` oferecem leitura rápida de reputação, BFR distribuído e círculos cifrados.
+- **Ações por voz:** `VoiceInput` alterna entre prompts e estado de escuta, preparando a camada de Web Speech/WebRTC futura.
+
+### Iniciando
+
+```bash
+pnpm install
+pnpm --filter befree-frontend dev
+```
+
+O comando inicia o servidor Next.js com hot reload. A página principal (`app/page.tsx`) apresenta a combinação do feed radial,
+painel do Jarbas, destaques de reputação e doca de ações. A folha de estilos em `styles/globals.css` aplica o visual
+neo-minimalista com gradientes pulsantes descrito na nota de design.
+
 ## CLI
 Instale dependências e linke o CLI:
 
@@ -97,17 +118,24 @@ befree simulation:run --state ./tmp/sprint.json
 
 # Reiniciar a simulação descartando snapshots anteriores
 befree simulation:run --reset --no-persist
+
+# Listar presets embutidos
+befree simulation:run --list-presets
+
+# Executar o preset cooperativo destacando participantes específicos
+befree simulation:run --preset p2p-sync --participants guardioes,cartografo
+
+# Exportar todos os logs da execução para um arquivo dedicado
+befree simulation:run --preset community-sprint --log-file ./tmp/sprint-logs.json --json
 ```
 
 Por padrão o comando `simulation:run` restaura e salva o estado no arquivo `~/.befree/simulation-state.json`,
 permitindo continuar ciclos comunitários em múltiplas execuções. Utilize `--state <arquivo>` para escolher um
 local customizado, `--reset` para iniciar do zero ignorando o arquivo e `--no-persist` caso não deseje gravar o novo
-snapshot ao final.
-
-Os relatórios no modo `--json` trazem o mesmo digest analítico exposto pelo orquestrador TypeScript (`feed.total`,
-`tags`, `authors`, `highlights`) e ampliam o snapshot com `reputation` e `governance`. O estado persistido agora inclui
-os eventos de reputação calculados durante o ciclo, garantindo que execuções subsequentes mantenham o histórico
-necessário para pontuações decrescentes.
+snapshot ao final. As flags `--preset` e `--list-presets` permitem alternar rapidamente entre cenários embutidos
+(`sample`, `community-sprint` e `p2p-sync`), enquanto `--participants` cria destaques por id/DID/rótulo no
+relatório final (útil para acompanhar atuação de guardiões específicos) e `--log-file` salva o histórico completo
+de passos em disco.
 
 ## Orquestração rápida
 
