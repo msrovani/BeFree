@@ -58,67 +58,6 @@ test('estado persistido da simulação pode ser reutilizado', async () => {
 
   assert.equal(snapshot.published.length, second.state.published.length);
   assert.equal(restored.identity.did, second.state.identity.did);
-});
-
-test('relatório inclui estatísticas por ator e destaque de participantes', async () => {
-  const actorScenario = {
-    name: 'Participantes ativos',
-    participants: [{ id: 'aliado', label: 'Aliado Local' }],
-    steps: [
-      {
-        label: 'Conteúdo recebido',
-        action: {
-          type: 'ingest',
-          participantId: 'aliado',
-          manifest: {
-            title: 'Relato de campo',
-            tags: ['relato', 'campo'],
-            evidence: { creationUnix: Date.now(), cid: 'aliado-relato' },
-          },
-          body: 'Atualização direta do campo após assembleia descentralizada.',
-        },
-      },
-      {
-        label: 'Abertura de proposta',
-        action: {
-          type: 'proposal',
-          draft: {
-            title: 'Priorizar recursos comunitários',
-            description: 'Definir próximos focos de investimento cooperado.',
-            options: [{ label: 'Educação popular' }, { label: 'Rede de cuidados' }],
-          },
-          activate: true,
-          autoVote: { participantId: 'aliado', choiceIndex: 1 },
-        },
-      },
-      {
-        label: 'Voto complementar',
-        action: { type: 'vote', participantId: 'aliado', choiceIndex: 0 },
-      },
-      {
-        label: 'Digest rápido',
-        action: { type: 'digest' },
-      },
-    ],
-  };
-
-  const report = await runScenario(actorScenario);
-
-  assert.ok(Array.isArray(report.actors));
-  assert.ok(report.actors.length >= 2);
-
-  const host = report.actors.find((actor) => actor.role === 'host');
-  assert.ok(host);
-  assert.equal(host.stats.proposals, 1);
-  assert.equal(host.stats.digests, 1);
-
-  const ally = report.actors.find((actor) => actor.id === 'aliado');
-  assert.ok(ally);
-  assert.equal(ally.stats.ingested, 1);
-  assert.equal(ally.stats.votes, 2);
-
-  assert.ok(Array.isArray(report.participants));
-  const participantEntry = report.participants.find((entry) => entry.id === 'aliado');
-  assert.ok(participantEntry);
-  assert.equal(participantEntry.stats.ingested, 1);
+  assert.ok(typeof snapshot.reputation === 'number');
+  assert.ok(Array.isArray(snapshot.governance));
 });

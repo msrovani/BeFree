@@ -97,24 +97,17 @@ befree simulation:run --state ./tmp/sprint.json
 
 # Reiniciar a simulação descartando snapshots anteriores
 befree simulation:run --reset --no-persist
-
-# Listar presets embutidos
-befree simulation:run --list-presets
-
-# Executar o preset cooperativo destacando participantes específicos
-befree simulation:run --preset p2p-sync --participants guardioes,cartografo
-
-# Exportar todos os logs da execução para um arquivo dedicado
-befree simulation:run --preset community-sprint --log-file ./tmp/sprint-logs.json --json
 ```
 
 Por padrão o comando `simulation:run` restaura e salva o estado no arquivo `~/.befree/simulation-state.json`,
 permitindo continuar ciclos comunitários em múltiplas execuções. Utilize `--state <arquivo>` para escolher um
 local customizado, `--reset` para iniciar do zero ignorando o arquivo e `--no-persist` caso não deseje gravar o novo
-snapshot ao final. As flags `--preset` e `--list-presets` permitem alternar rapidamente entre cenários embutidos
-(`sample`, `community-sprint` e `p2p-sync`), enquanto `--participants` cria destaques por id/DID/rótulo no
-relatório final (útil para acompanhar atuação de guardiões específicos) e `--log-file` salva o histórico completo
-de passos em disco.
+snapshot ao final.
+
+Os relatórios no modo `--json` trazem o mesmo digest analítico exposto pelo orquestrador TypeScript (`feed.total`,
+`tags`, `authors`, `highlights`) e ampliam o snapshot com `reputation` e `governance`. O estado persistido agora inclui
+os eventos de reputação calculados durante o ciclo, garantindo que execuções subsequentes mantenham o histórico
+necessário para pontuações decrescentes.
 
 ## Orquestração rápida
 

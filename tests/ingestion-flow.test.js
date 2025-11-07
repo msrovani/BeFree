@@ -48,6 +48,7 @@ test('ingest aceita envelope válido e rejeita duplicados e inválidos', async (
 
   const accepted = await simulator.ingest(envelope, 'peer-sul');
   assert.equal(accepted, 'accepted');
+  assert.ok(simulator.reputationScore() > 0);
 
   const duplicate = await simulator.ingest(envelope, 'peer-sul');
   assert.equal(duplicate, 'duplicate');
