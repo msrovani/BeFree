@@ -57,6 +57,7 @@ befree-os/
 - **Governança:** propostas colaborativas, votação ponderada, cálculo de quórum e arquivamento automático das decisões no snapshot do orquestrador.
 - **Analytics:** digest diário das publicações com tendências de tags, pulsações de autores, intenções dominantes e palavras-chave destacadas.
 - **Automação:** engine de tarefas reativas e jobs recorrentes que disparam ações a partir de publicações, votos, reputação, ledger e digest analíticos.
+- **Telemetria:** coletor em memória com contadores, gauges, histogramas e eventos recentes para inspecionar o desempenho dos pipelines, sincronia de feeds, governança e automações.
 
 ## CLI
 Instale dependências e linke o CLI:
@@ -152,11 +153,26 @@ orchestrator.scheduleDigest({
   taskId: 'digest:6h',
 });
 
+// Consultar métricas de execução e resetar o coletor quando necessário
+console.log(orchestrator.getTelemetrySnapshot());
+orchestrator.resetTelemetry();
+
 // Persistir estado sob demanda (além do autosave)
 await orchestrator.saveState();
 ```
 
 O campo `storage` aceita um caminho para arquivo (usando o adaptador de disco padrão) ou um adaptador customizado que implemente `load()`/`save()`. Com `autosaveIntervalMs` definido, o orquestrador grava o estado consolidado em intervalos regulares e também após publicações, recebimentos ou limpezas de inbox.
+
+### Observando métricas em tempo real
+
+O orquestrador expõe um coletor de telemetria interno (`getTelemetry()`) e snapshots serializáveis (`getTelemetrySnapshot()`) que incluem:
+
+- Contadores agregados (`content.publish.success`, `governance.votes.attempts`, `storage.persist.errors`, etc.).
+- Gauges instantâneos como o intervalo de autosave (`orchestrator.autosave.interval_ms`).
+- Histogramas com duração de pipelines (`content.publish.duration`, `analytics.digests.duration`).
+- Eventos recentes (últimas operações em `storage`, `automation`, `analytics`, `content`, entre outros).
+
+Esses dados podem ser usados para dashboards ou alertas rápidos enquanto jobs e automações estão ativos.
 
 Tarefas cadastradas com `registerAutomationTask` recebem o evento disparador (como `content:published`, `governance:proposal:closed` ou `analytics:digest`) e podem manter estado interno via `context.setState`. Jobs recorrentes criados por `scheduleAutomationJob` ou `scheduleDigest` executam funções assíncronas em intervalos configuráveis, emitindo eventos `automation:log` a cada execução ou falha.
 

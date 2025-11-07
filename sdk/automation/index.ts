@@ -7,6 +7,7 @@ import type {
 } from '../platform';
 import type { TransferReceipt } from '../economy';
 import type { ReputationEvent } from '../reputation';
+import type { TelemetryCollector } from '../telemetry';
 
 export type AutomationEvent =
   | { type: 'content:published'; envelope: ContentBroadcastEnvelope }
@@ -81,6 +82,7 @@ export interface AutomationContext {
   orchestrator?: unknown;
   emit?: (event: string, payload?: unknown) => void;
   logger?: (event: AutomationLogEvent) => void | Promise<void>;
+  telemetry?: TelemetryCollector;
   getState<T>(key: string): T | undefined;
   setState<T>(key: string, value: T): void;
   deleteState(key: string): void;
@@ -153,6 +155,8 @@ export class AutomationEngine {
     this.tasks.set(id, normalized);
     this.taskStats.set(id, { runs: 0 });
     void this.log({ level: 'info', message: 'Automation task registered', taskId: id, meta: { triggers: normalized.triggers } });
+    this.baseContext.telemetry?.increment('automation.tasks.registered');
+    this.baseContext.telemetry?.setGauge('automation.tasks.active', this.tasks.size);
     return id;
   }
 
@@ -162,6 +166,8 @@ export class AutomationEngine {
       this.taskStats.delete(taskId);
       this.taskLastRun.delete(taskId);
       void this.log({ level: 'debug', message: 'Automation task removed', taskId });
+      this.baseContext.telemetry?.increment('automation.tasks.removed');
+      this.baseContext.telemetry?.setGauge('automation.tasks.active', this.tasks.size);
     }
     return existed;
   }
@@ -188,6 +194,8 @@ export class AutomationEngine {
   async handle(event: AutomationEvent) {
     const context = this.buildContext();
     const now = Date.now();
+    context.telemetry?.increment('automation.events.received');
+    context.telemetry?.increment(`automation.events.${event.type}`);
     for (const task of this.tasks.values()) {
       if (!task.triggers.includes(event.type)) {
         continue;
@@ -202,10 +210,24 @@ export class AutomationEngine {
         if (task.filter) {
           const allowed = await task.filter(event as never, context);
           if (!allowed) {
+            context.telemetry?.increment('automation.tasks.filtered');
             continue;
           }
         }
-        await task.run(event as never, context);
+        const started = Date.now();
+        try {
+          await task.run(event as never, context);
+          const duration = Date.now() - started;
+          context.telemetry?.increment('automation.tasks.executed');
+          context.telemetry?.observe('automation.tasks.duration', duration);
+          context.telemetry?.observe(`automation.task.${task.id}.duration`, duration);
+        } catch (error) {
+          const duration = Date.now() - started;
+          context.telemetry?.increment('automation.tasks.failed');
+          context.telemetry?.observe('automation.tasks.duration:error', duration);
+          context.telemetry?.recordEvent('automation:task:error', { id: task.id, event: event.type });
+          throw error;
+        }
         const stats = this.taskStats.get(task.id);
         if (stats) {
           stats.runs += 1;
@@ -222,6 +244,7 @@ export class AutomationEngine {
           meta: { event: event.type },
           error,
         });
+        context.telemetry?.increment('automation.tasks.errors');
       }
       if (task.once) {
         this.removeTask(task.id);
@@ -247,6 +270,8 @@ export class AutomationEngine {
     }, job.intervalMs);
     this.jobs.set(id, internal);
     void this.log({ level: 'info', message: 'Automation job scheduled', taskId: id, meta: { intervalMs: job.intervalMs } });
+    this.baseContext.telemetry?.increment('automation.jobs.scheduled');
+    this.baseContext.telemetry?.setGauge('automation.jobs.active', this.jobs.size);
     if (job.immediate) {
       void this.executeJob(internal);
     }
@@ -256,13 +281,20 @@ export class AutomationEngine {
   private async executeJob(job: InternalJob) {
     const context = this.buildContext();
     try {
+      const started = Date.now();
       await job.run(context);
+      const duration = Date.now() - started;
+      context.telemetry?.increment('automation.jobs.executed');
+      context.telemetry?.observe('automation.jobs.duration', duration);
+      context.telemetry?.observe(`automation.job.${job.id}.duration`, duration);
       job.runs += 1;
       job.lastRunAt = Date.now();
       this.jobs.set(job.id, job);
       void this.log({ level: 'debug', message: 'Automation job executed', taskId: job.id });
     } catch (error) {
       void this.log({ level: 'error', message: 'Automation job failed', taskId: job.id, error });
+      context.telemetry?.increment('automation.jobs.errors');
+      context.telemetry?.recordEvent('automation:job:error', { id: job.id });
     }
   }
 
@@ -274,6 +306,8 @@ export class AutomationEngine {
     }
     this.jobs.delete(jobId);
     void this.log({ level: 'debug', message: 'Automation job cancelled', taskId: jobId });
+    this.baseContext.telemetry?.increment('automation.jobs.cancelled');
+    this.baseContext.telemetry?.setGauge('automation.jobs.active', this.jobs.size);
     return true;
   }
 
@@ -289,13 +323,17 @@ export class AutomationEngine {
       }
     }
     void this.log({ level: 'info', message: 'Automation jobs stopped' });
+    this.baseContext.telemetry?.recordEvent('automation:jobs:stopped');
+    this.baseContext.telemetry?.setGauge('automation.jobs.active', 0);
   }
 
   clearState(key?: string) {
     if (typeof key === 'string') {
       this.state.delete(key);
+      this.baseContext.telemetry?.recordEvent('automation:state:cleared', { key });
       return;
     }
     this.state.clear();
+    this.baseContext.telemetry?.recordEvent('automation:state:cleared', key ? { key } : undefined);
   }
 }

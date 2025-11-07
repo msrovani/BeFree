@@ -118,6 +118,26 @@ Remove estado interno associado a tarefas. Sem argumento, limpa o `Map` inteiro.
 - `RegisteredAutomationJob`: inclui métricas `runs` e `lastRunAt` sobre jobs ativos.
 - `AutomationEvent`: união tipada de todos os eventos suportados.
 
+## Telemetria (`sdk/telemetry`)
+
+### `new TelemetryCollector({ maxEvents? })`
+Instancia um coletor de métricas em memória com suporte a contadores, gauges, histogramas e buffer circular de eventos (padrão de 200 itens).
+
+### `collector.increment(name, delta?)`
+Incrementa contadores numéricos identificados por `name` (aceita valores negativos) e atualiza o timestamp de alteração.
+
+### `collector.setGauge(name, value)`
+Registra valores instantâneos (como intervalos ou tamanhos atuais) associados a um identificador.
+
+### `collector.observe(name, value)` / `collector.time(name, fn)`
+Atualiza histogramas agregados manualmente (`observe`) ou cronometra execuções síncronas/assíncronas (`time`), registrando média, mínimos, máximos e o último valor observado. Falhas são reportadas em métricas com sufixo `:error`.
+
+### `collector.recordEvent(name, payload?)`
+Armazena eventos recentes com metadados opcionais, mantendo apenas os `maxEvents` mais novos.
+
+### `collector.snapshot()` / `collector.reset()`
+Exportam o estado completo (contadores, gauges, medições e eventos com timestamp de geração) ou limpam toda a memória acumulada.
+
 ## Orquestração (`sdk/platform`)
 
 ### `new CommunityOrchestrator(options?)`
@@ -128,9 +148,11 @@ Inicializa um orquestrador que conecta identidade, reputação, economia, IA e P
 - `defaultReward`/`rewardMemo`: recompensa simbólica automática para cada publicação.
 - `storage`: adaptador com métodos `load()` e `save()` ou caminho de arquivo para persistir o estado consolidado (identidade, feed, inbox, reputação e ledger).
 - `autosaveIntervalMs`: intervalo opcional para autosave periódico quando um adaptador de armazenamento é fornecido.
+- `telemetry`: coletor externo `TelemetryCollector` ou `telemetryOptions` para customizar o buffer de eventos do coletor interno.
 
 ### `orchestrator.publishContent(manifest, body, options?)`
 Executa o pipeline completo (classificação, moderação, resumo, intenção, recompensa opcional) e transmite o envelope assinado via P2P. Emite eventos `content:published`, `content:received`, `content:invalid` e `content:error`, além de disparar automações `reputation:event`, `ledger:transfer` (quando houver recompensa) e `content:published` para tarefas registradas.
+Atualiza contadores (`content.publish.attempts/success/errors`), histogramas (`content.publish.duration`) e eventos recentes no coletor de telemetria associado.
 
 ### `orchestrator.requestAssistance(text)`
 Retorna intenção, resumo curto e palavras-chave para um texto livre, reaproveitando os utilitários determinísticos de IA.
@@ -185,12 +207,16 @@ Dispara uma requisição P2P para recuperar novas publicações de outros orques
 
 ### `orchestrator.generateDigest(options?)`
 Gera um digest estruturado das interações recentes, combinando feed publicado e inbox (quando habilitado). O resultado inclui tendências de tags, autores mais ativos com seus pulsos ponderados, intenções detectadas e um resumo sintético dos conteúdos destacados. Emite evento `analytics:digest` (que também alimenta automações cadastradas) após o cálculo.
+Mede automaticamente a duração do processamento (`analytics.digests.duration`) e registra eventos `analytics:digest` com totais agregados na telemetria.
 
 ### `orchestrator.snapshot()`
 Gera um instantâneo consolidado com autor, feed publicado, inbox, histórico do ledger, reputação atual e todas as propostas registradas (incluindo votos e desfecho quando houver).
 
 ### `orchestrator.saveState()`
 Força a persistência imediata do estado completo usando o adaptador configurado (ou caminho de arquivo).
+
+### `orchestrator.getTelemetry()` / `orchestrator.getTelemetrySnapshot()` / `orchestrator.resetTelemetry()`
+Exibem o coletor interno, retornam uma visão serializada das métricas atuais (contadores, gauges, histogramas e eventos recentes) e limpam o histórico acumulado, respectivamente.
 
 O orquestrador também emite eventos `storage:restored`, `storage:saved`, `storage:error`, `automation:log`, `automation:error`, `analytics:digest:scheduled` e uma família `governance:proposal:<evento>` para criação, ativação, voto, cancelamento e encerramento de propostas quando um adaptador está presente.
 
