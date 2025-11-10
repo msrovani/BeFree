@@ -1,0 +1,41 @@
+{
+  "name": "Sprint comunitária BFR",
+  "participants": [
+    { "id": "mentora", "label": "Mentora Local" },
+    { "id": "verificador", "label": "Verificador de Campo" }
+  ],
+  "steps": [
+    {
+      "label": "Publicação inicial",
+      "action": {
+        "type": "publish",
+        "manifest": {
+          "title": "Agenda colaborativa",
+          "tags": ["agenda", "befree"],
+          "evidence": { "creationUnix": 1700000000, "cid": "cid-agenda" }
+        },
+        "body": "Resumo das entregas planejadas para a sprint comunitária."
+      }
+    },
+    {
+      "label": "Conteúdo recebido",
+      "action": {
+        "type": "ingest",
+        "participantId": "mentora",
+        "manifest": {
+          "title": "Relato do campo",
+          "tags": ["relato", "campo"],
+          "evidence": { "creationUnix": 1700000100, "cid": "cid-relato" }
+        },
+        "body": "Atualização da mentoria realizada no território leste."
+      }
+    },
+    {
+      "label": "Digest diário",
+      "action": {
+        "type": "digest",
+        "options": { "topTags": 5 }
+      }
+    }
+  ]
+}
