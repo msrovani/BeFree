@@ -252,16 +252,23 @@ Protótipo Next.js com foco na experiência sensorial descrita na nota de design
 para consumo direto em aplicações React/Next e podem ser reaproveitados em miniapps híbridos.
 
 ### `TopBar`
-Renderiza a navegação principal com atalho de conexão de carteira (`useWallet`). Exibe marca BEFREE, status da rede lógica
-(`befree-holo-testnet`) e ícones principais.
+Renderiza a navegação principal com atalho de conexão de carteira (`useWallet`). Recebe `summary` (digest ativo, totais e host)
+para exibir o estado recente do orquestrador em tempo real, além da marca BEFREE e status da rede lógica (`befree-holo-testnet`).
 
 ### `RadialFeed`
-Organiza pulsos (`Pulse`) em órbitas calculadas por `usePulseLayout`, destacando reputação, energia e assistências do Jarbas.
-Utiliza `FeedOrb` para cada entrada.
+Organiza pulsos (`Pulse[]`) recebidos via `loadCommunitySnapshot()` em órbitas calculadas por `usePulseLayout`, destacando
+reputação, energia e assistências do Jarbas. Utiliza `FeedOrb` para cada entrada.
 
 ### `JarbasPanel`
-Painel do assistente pessoal com os insights do módulo `useJarbasPresence`. Mostra humor, status (escutando/respondendo) e ações
-recomendadas.
+Painel do assistente pessoal com os insights do módulo `useJarbasPresence(insights)`. Mostra humor, status
+(escutando/respondendo) e ações recomendadas com rotação automática das mensagens geradas pelo digest.
+
+### `ReputationCard`
+Recebe `participants` mapeados do orquestrador e apresenta métricas agregadas (`useReputationMetrics`) e destaques individuais
+de reputação, streak e BFR acumulado.
+
+### `CirclePanel`
+Lista `circles` sintetizados a partir das tendências do digest, com nível de confiança, membros e estado de cifragem.
 
 ### `ActionDock`
 Contém `VoiceInput`, botão de novo pulse, captura de prova viva e atalho para círculos fechados. Mantém visual adaptado ao fluxo
@@ -269,13 +276,19 @@ por voz descrito no roadmap.
 
 ### Hooks utilitários
 - `usePulseLayout(pulses)`: projeta conteúdo em órbitas (`angle`, `radius`) para efeitos radiais.
-- `useJarbasPresence()`: simula batimento de presença do Jarbas enquanto insights são rotacionados.
+- `useJarbasPresence(insights)`: simula batimento de presença do Jarbas enquanto insights fornecidos são rotacionados.
 - `useWallet()`: stub de conexão com WalletConnect, exibindo endereço e rede.
-- `useReputationMetrics()`: agrega reputação média, pico e piso a partir dos participantes.
+- `useReputationMetrics(participants)`: agrega reputação média, pico e piso a partir dos participantes recebidos.
+
+### `loadCommunitySnapshot(options?)`
+Função assíncrona localizada em `apps/frontend/lib/liveCommunity.ts` que instancia o `CommunityOrchestrator`, executa o cenário
+padrão via `runSimulation`, gera digest, mapeia pulsos, participantes, círculos e insights, retornando um objeto
+`LiveCommunityData`. Aceita `options.scenario` (para customizar o roteiro) e `options.iterations`. Em caso de erro, retorna o
+`fallbackCommunityData` definido em `lib/demoData`.
 
 ### Dados de demonstração
-O módulo `lib/demoData` fornece pulsos, participantes, círculos e prompts de voz utilizados na tela inicial. Pode ser substituído
-por chamadas em tempo real ao orquestrador quando a ponte P2P/API estiver disponível.
+O módulo `lib/demoData` fornece tipos, prompts de voz e o `fallbackCommunityData`, utilizado como reserva quando
+`loadCommunitySnapshot()` não consegue executar o orquestrador (ex.: ambientes sem `ts-node`).
 
 ## CLI (`packages/cli`)
 

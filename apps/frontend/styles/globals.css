@@ -34,9 +34,10 @@ body {
 }
 
 .topbar {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1fr minmax(0, 1.6fr) auto;
   align-items: center;
-  justify-content: space-between;
+  gap: 1.25rem;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 20px;
@@ -63,6 +64,7 @@ body {
 .topbar__nav {
   display: flex;
   gap: 1rem;
+  justify-self: center;
 }
 
 .topbar__navItem {
@@ -116,6 +118,25 @@ body {
 .topbar__network {
   font-size: 0.8rem;
   color: var(--text-secondary);
+}
+
+.topbar__summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.topbar__summaryDigest {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.topbar__summaryStats {
+  font-size: 0.75rem;
+  opacity: 0.85;
 }
 
 .layout {
@@ -523,13 +544,18 @@ body {
   }
 
   .topbar {
-    flex-direction: column;
-    align-items: flex-start;
+    grid-template-columns: 1fr;
+    align-items: stretch;
     gap: 1rem;
   }
 
   .topbar__nav {
     flex-wrap: wrap;
+    justify-self: flex-start;
+  }
+
+  .topbar__summary {
+    width: 100%;
   }
 
   .action-dock {
