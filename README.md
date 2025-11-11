@@ -67,11 +67,12 @@ befree-os/
 O diretório `apps/frontend` inaugura o protótipo da interface viva BEFREE usando Next.js 15 com foco em experiências não lineares.
 
 ### Conceitos
-- **Feed radial:** conteúdos aparecem como órbitas energéticas (`FeedOrb`) organizadas por reputação e energia social.
-- **IA presente:** o painel `JarbasPanel` sinaliza humor, status e recomendações acionáveis do assistente pessoal.
-- **Economia visível:** `ReputationCard` e `CirclePanel` oferecem leitura rápida de reputação, BFR distribuído e círculos cifrados.
+- **Feed radial holográfico:** `RadialFeed` usa `framer-motion` e halos rotativos para transformar cada publicação em um pulso orbitando o usuário, com constelações e cores que refletem reputação e energia social.
+- **IA presente:** o painel `JarbasPanel` agora exibe aura animada, humor e status em tempo real, com sugestões acionáveis em estilo manifesto para reforçar a presença do assistente pessoal.
+- **Economia visível:** `ReputationCard` traz barras energéticas e brilhos reputacionais; `CirclePanel` ganhou indicadores de confiança, blindagem de privacidade e barras de sincronização P2P.
 - **Snapshot vivo:** `loadCommunitySnapshot()` executa o orquestrador TypeScript com o cenário padrão, gera digest, reputação por participante e abastece o feed radial com dados reais do pipeline.
-- **Ações por voz:** `VoiceInput` alterna entre prompts e estado de escuta, preparando a camada de Web Speech/WebRTC futura.
+- **Ações por voz:** `VoiceInput` alterna entre prompts e estado de escuta com ondas animadas, preparando a camada de Web Speech/WebRTC futura.
+- **Dock sensorial:** o `ActionDock` reúne emissão de novos pulsos, captura com prova viva e abertura de círculos sigilosos usando botões em glassmorphism e dicas guiadas pelo Jarbas.
 
 ### Iniciando
 
@@ -82,8 +83,8 @@ pnpm --filter befree-frontend dev
 
 O comando inicia o servidor Next.js com hot reload. A página principal (`app/page.tsx`) chama `loadCommunitySnapshot()`
 para executar rapidamente o orquestrador, gerar digest analítico e preencher os componentes client-side (`RadialFeed`,
-`JarbasPanel`, `ReputationCard`, `CirclePanel`) com dados vivos. A folha de estilos em `styles/globals.css` aplica o visual
-neo-minimalista com gradientes pulsantes descrito na nota de design.
+`JarbasPanel`, `ReputationCard`, `CirclePanel`) com dados vivos. A folha de estilos em `styles/globals.css` materializa o visual
+neo-orgânico com glassmorphism, constelações e animações contínuas inspiradas no manifesto de design "BeFree UI v2".
 
 ## CLI
 Instale dependências e linke o CLI:

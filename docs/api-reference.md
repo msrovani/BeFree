@@ -257,22 +257,25 @@ para exibir o estado recente do orquestrador em tempo real, além da marca BEFRE
 
 ### `RadialFeed`
 Organiza pulsos (`Pulse[]`) recebidos via `loadCommunitySnapshot()` em órbitas calculadas por `usePulseLayout`, destacando
-reputação, energia e assistências do Jarbas. Utiliza `FeedOrb` para cada entrada.
+reputação, energia e assistências do Jarbas. Utiliza `FeedOrb` com animações do `framer-motion`, halos rotativos
+e constelações holográficas para reforçar o conceito de feed não linear.
 
 ### `JarbasPanel`
 Painel do assistente pessoal com os insights do módulo `useJarbasPresence(insights)`. Mostra humor, status
-(escutando/respondendo) e ações recomendadas com rotação automática das mensagens geradas pelo digest.
+(escutando/respondendo) e ações recomendadas com rotação automática das mensagens geradas pelo digest, agora com
+aura animada, avatar holográfico e botões contextuais que simulam o manifesto "IA companheira".
 
 ### `ReputationCard`
 Recebe `participants` mapeados do orquestrador e apresenta métricas agregadas (`useReputationMetrics`) e destaques individuais
-de reputação, streak e BFR acumulado.
+de reputação, streak e BFR acumulado com barras energéticas, faíscas reputacionais e pontuação holográfica.
 
 ### `CirclePanel`
 Lista `circles` sintetizados a partir das tendências do digest, com nível de confiança, membros e estado de cifragem.
+O cabeçalho destaca blindagem (`🌀` / `🔐`) e a barra de confiança visualiza a sincronização P2P de cada círculo.
 
 ### `ActionDock`
-Contém `VoiceInput`, botão de novo pulse, captura de prova viva e atalho para círculos fechados. Mantém visual adaptado ao fluxo
-por voz descrito no roadmap.
+Contém `VoiceInput`, botão de novo pulse, captura de prova viva e atalho para círculos fechados. O módulo recebeu glassmorphism,
+mensagem motivacional e interações animadas para servir de ponte entre voz, publicação e círculos sigilosos.
 
 ### Hooks utilitários
 - `usePulseLayout(pulses)`: projeta conteúdo em órbitas (`angle`, `radius`) para efeitos radiais.

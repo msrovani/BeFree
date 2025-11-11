@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion';
 import React from 'react';
 
 import type { PositionedPulse } from '../hooks/usePulseLayout';
@@ -31,15 +32,22 @@ export function FeedOrb({ pulse }: FeedOrbProps) {
   const highlightClass = pulse.aiAssisted ? 'feed-orb__body ai-assisted' : 'feed-orb__body';
 
   return (
-    <article className="feed-orb" style={{ transform: rotation }}>
-      <div
+    <motion.article
+      className="feed-orb"
+      style={{ transform: rotation }}
+      animate={{ rotate: [0, 3, -3, 0] }}
+      transition={{ repeat: Infinity, duration: 14, ease: 'easeInOut', delay: pulse.energy }}
+    >
+      <motion.div
         className={highlightClass}
         style={{
-          background: `linear-gradient(180deg, ${auraColor} 0%, rgba(11, 21, 35, 0.65) 100%)`,
+          background: `linear-gradient(180deg, ${auraColor} 0%, rgba(9, 9, 11, 0.82) 100%)`,
           boxShadow: reputationToShadow(pulse.reputation),
           width: orbSize,
           height: orbSize,
         }}
+        animate={{ scale: [1, 1.05, 1] }}
+        transition={{ repeat: Infinity, duration: 6 + pulse.energy * 6, ease: 'easeInOut' }}
       >
         <header className="feed-orb__header">
           <span className="feed-orb__role" aria-hidden>
@@ -56,7 +64,7 @@ export function FeedOrb({ pulse }: FeedOrbProps) {
           <span className="badge">Energia {(pulse.energy * 100).toFixed(0)}%</span>
           {pulse.aiAssisted && <span className="badge ai">assistido por Jarbas</span>}
         </footer>
-      </div>
-    </article>
+      </motion.div>
+    </motion.article>
   );
 }
