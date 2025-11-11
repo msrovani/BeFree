@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.20;
 
-import "./FREE.sol";
+import "./BFR.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
 contract ElasticIssuance is AccessControl {
     bytes32 public constant ORACLE_ROLE = keccak256("ORACLE_ROLE");
     uint256 public E_MIN;
     uint256 public ALPHA;
-    FREE public token;
+    BFR public token;
 
     event Emitted(uint256 dayIndex, uint256 amount);
 
     constructor(address token_, uint256 eMin, uint256 alpha) {
-        token = FREE(token_);
+        token = BFR(token_);
         E_MIN = eMin;
         ALPHA = alpha;
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);

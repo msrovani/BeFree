@@ -7,6 +7,7 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "jsx": "react-jsx",
-    "types": []
-  }
+    "types": ["node"]
+  },
+  "include": ["apps/**/*", "sdk/**/*", "packages/**/*", "infra/**/*", "contracts/**/*", "docs/**/*"]
 }

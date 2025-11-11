@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.20;
 
-import "./FREE.sol";
+import "./BFR.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
 contract Treasury is AccessControl {
-    FREE public token;
+    BFR public token;
     address public burnAddress = 0x000000000000000000000000000000000000dEaD;
 
     constructor(address token_) {
-        token = FREE(token_);
+        token = BFR(token_);
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
