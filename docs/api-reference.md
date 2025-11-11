@@ -253,35 +253,36 @@ para consumo direto em aplicações React/Next e podem ser reaproveitados em min
 
 ### `TopBar`
 Renderiza a navegação principal com atalho de conexão de carteira (`useWallet`). Recebe `summary` (digest ativo, totais e host)
-para exibir o estado recente do orquestrador em tempo real, além da marca BEFREE e status da rede lógica (`befree-holo-testnet`).
+para exibir o estado recente do orquestrador em tempo real, aplicando microtransições com keyframes inspirados no Framer Motion à marca, navegação e
+status da rede lógica (`befree-holo-testnet`).
 
 ### `RadialFeed`
-Organiza pulsos (`Pulse[]`) recebidos via `loadCommunitySnapshot()` em órbitas calculadas por `usePulseLayout`, destacando
-reputação, energia e assistências do Jarbas. Utiliza `FeedOrb` com animações do `framer-motion`, halos rotativos
-e constelações holográficas para reforçar o conceito de feed não linear.
+Organiza pulsos (`Pulse[]`) recebidos via `loadCommunitySnapshot()` em órbitas calculadas por `usePulseLayout`, com halos animados
+e respiração contínua de cada `FeedOrb` por meio de keyframes inspirados no Framer Motion para destacar reputação, energia e assistências do Jarbas.
 
 ### `JarbasPanel`
 Painel do assistente pessoal com os insights do módulo `useJarbasPresence(insights)`. Mostra humor, status
-(escutando/respondendo) e ações recomendadas com rotação automática das mensagens geradas pelo digest, agora com
-aura animada, avatar holográfico e botões contextuais que simulam o manifesto "IA companheira".
+(escutando/respondendo) e ações recomendadas com rotação automática das mensagens geradas pelo digest, além de aura holográfica e
+transições escalonadas via keyframes para cada insight.
 
 ### `ReputationCard`
 Recebe `participants` mapeados do orquestrador e apresenta métricas agregadas (`useReputationMetrics`) e destaques individuais
-de reputação, streak e BFR acumulado com barras energéticas, faíscas reputacionais e pontuação holográfica.
+de reputação, streak e BFR acumulado.
 
 ### `CirclePanel`
 Lista `circles` sintetizados a partir das tendências do digest, com nível de confiança, membros e estado de cifragem.
-O cabeçalho destaca blindagem (`🌀` / `🔐`) e a barra de confiança visualiza a sincronização P2P de cada círculo.
 
 ### `ActionDock`
-Contém `VoiceInput`, botão de novo pulse, captura de prova viva e atalho para círculos fechados. O módulo recebeu glassmorphism,
-mensagem motivacional e interações animadas para servir de ponte entre voz, publicação e círculos sigilosos.
+Contém `VoiceInput`, botão de novo pulse, captura de prova viva e atalho para círculos fechados. Mantém visual adaptado ao fluxo
+por voz descrito no roadmap e dispara sons contextuais via `useSonicFeedback` (Web Audio) para reforçar ações-chave.
 
 ### Hooks utilitários
 - `usePulseLayout(pulses)`: projeta conteúdo em órbitas (`angle`, `radius`) para efeitos radiais.
 - `useJarbasPresence(insights)`: simula batimento de presença do Jarbas enquanto insights fornecidos são rotacionados.
 - `useWallet()`: stub de conexão com WalletConnect, exibindo endereço e rede.
 - `useReputationMetrics(participants)`: agrega reputação média, pico e piso a partir dos participantes recebidos.
+- `useSonicFeedback()`: inicializa um `AudioContext` sob demanda e expõe `trigger(event)` para eventos sonoros (`publish`,
+  `reward`, `burn`) usados pelo `ActionDock` e componentes futuros.
 
 ### `loadCommunitySnapshot(options?)`
 Função assíncrona localizada em `apps/frontend/lib/liveCommunity.ts` que instancia o `CommunityOrchestrator`, executa o cenário

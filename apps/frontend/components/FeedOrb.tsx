@@ -1,4 +1,3 @@
-import { motion } from 'framer-motion';
 import React from 'react';
 
 import type { PositionedPulse } from '../hooks/usePulseLayout';
@@ -22,7 +21,7 @@ interface FeedOrbProps {
 
 function reputationToShadow(score: number) {
   const intensity = Math.min(0.45 + score / 200, 0.85);
-  return `0 0 25px rgba(102, 233, 255, ${intensity})`;
+  return `0 0 28px rgba(56, 189, 248, ${intensity})`;
 }
 
 export function FeedOrb({ pulse }: FeedOrbProps) {
@@ -30,24 +29,21 @@ export function FeedOrb({ pulse }: FeedOrbProps) {
   const auraColor = ROLE_COLORS[pulse.authorRole];
   const orbSize = 120 + Math.round(pulse.energy * 60);
   const highlightClass = pulse.aiAssisted ? 'feed-orb__body ai-assisted' : 'feed-orb__body';
+  const animationDelay = `${(pulse.radius % 5) * 0.3}s`;
 
   return (
-    <motion.article
+    <article
       className="feed-orb"
-      style={{ transform: rotation }}
-      animate={{ rotate: [0, 3, -3, 0] }}
-      transition={{ repeat: Infinity, duration: 14, ease: 'easeInOut', delay: pulse.energy }}
+      style={{ transform: rotation, '--orb-delay': animationDelay } as React.CSSProperties}
     >
-      <motion.div
+      <div
         className={highlightClass}
         style={{
-          background: `linear-gradient(180deg, ${auraColor} 0%, rgba(9, 9, 11, 0.82) 100%)`,
+          background: `linear-gradient(180deg, ${auraColor} 0%, rgba(11, 21, 35, 0.75) 100%)`,
           boxShadow: reputationToShadow(pulse.reputation),
           width: orbSize,
           height: orbSize,
         }}
-        animate={{ scale: [1, 1.05, 1] }}
-        transition={{ repeat: Infinity, duration: 6 + pulse.energy * 6, ease: 'easeInOut' }}
       >
         <header className="feed-orb__header">
           <span className="feed-orb__role" aria-hidden>
@@ -64,7 +60,7 @@ export function FeedOrb({ pulse }: FeedOrbProps) {
           <span className="badge">Energia {(pulse.energy * 100).toFixed(0)}%</span>
           {pulse.aiAssisted && <span className="badge ai">assistido por Jarbas</span>}
         </footer>
-      </motion.div>
-    </motion.article>
+      </div>
+    </article>
   );
 }
