@@ -252,16 +252,23 @@ Protótipo Next.js com foco na experiência sensorial descrita na nota de design
 para consumo direto em aplicações React/Next e podem ser reaproveitados em miniapps híbridos.
 
 ### `TopBar`
-Renderiza a navegação principal com atalho de conexão de carteira (`useWallet`). Exibe marca BEFREE, status da rede lógica
-(`befree-holo-testnet`) e ícones principais.
+Renderiza a navegação principal com atalho de conexão de carteira (`useWallet`). Recebe `summary` (digest ativo, totais e host)
+para exibir o estado recente do orquestrador em tempo real, além da marca BEFREE e status da rede lógica (`befree-holo-testnet`).
 
 ### `RadialFeed`
-Organiza pulsos (`Pulse`) em órbitas calculadas por `usePulseLayout`, destacando reputação, energia e assistências do Jarbas.
-Utiliza `FeedOrb` para cada entrada.
+Organiza pulsos (`Pulse[]`) recebidos via `loadCommunitySnapshot()` em órbitas calculadas por `usePulseLayout`, destacando
+reputação, energia e assistências do Jarbas. Utiliza `FeedOrb` para cada entrada.
 
 ### `JarbasPanel`
-Painel do assistente pessoal com os insights do módulo `useJarbasPresence`. Mostra humor, status (escutando/respondendo) e ações
-recomendadas.
+Painel do assistente pessoal com os insights do módulo `useJarbasPresence(insights)`. Mostra humor, status
+(escutando/respondendo) e ações recomendadas com rotação automática das mensagens geradas pelo digest.
+
+### `ReputationCard`
+Recebe `participants` mapeados do orquestrador e apresenta métricas agregadas (`useReputationMetrics`) e destaques individuais
+de reputação, streak e BFR acumulado.
+
+### `CirclePanel`
+Lista `circles` sintetizados a partir das tendências do digest, com nível de confiança, membros e estado de cifragem.
 
 ### `ActionDock`
 Contém `VoiceInput`, botão de novo pulse, captura de prova viva e atalho para círculos fechados. Mantém visual adaptado ao fluxo
@@ -269,13 +276,19 @@ por voz descrito no roadmap.
 
 ### Hooks utilitários
 - `usePulseLayout(pulses)`: projeta conteúdo em órbitas (`angle`, `radius`) para efeitos radiais.
-- `useJarbasPresence()`: simula batimento de presença do Jarbas enquanto insights são rotacionados.
+- `useJarbasPresence(insights)`: simula batimento de presença do Jarbas enquanto insights fornecidos são rotacionados.
 - `useWallet()`: stub de conexão com WalletConnect, exibindo endereço e rede.
-- `useReputationMetrics()`: agrega reputação média, pico e piso a partir dos participantes.
+- `useReputationMetrics(participants)`: agrega reputação média, pico e piso a partir dos participantes recebidos.
+
+### `loadCommunitySnapshot(options?)`
+Função assíncrona localizada em `apps/frontend/lib/liveCommunity.ts` que instancia o `CommunityOrchestrator`, executa o cenário
+padrão via `runSimulation`, gera digest, mapeia pulsos, participantes, círculos e insights, retornando um objeto
+`LiveCommunityData`. Aceita `options.scenario` (para customizar o roteiro) e `options.iterations`. Em caso de erro, retorna o
+`fallbackCommunityData` definido em `lib/demoData`.
 
 ### Dados de demonstração
-O módulo `lib/demoData` fornece pulsos, participantes, círculos e prompts de voz utilizados na tela inicial. Pode ser substituído
-por chamadas em tempo real ao orquestrador quando a ponte P2P/API estiver disponível.
+O módulo `lib/demoData` fornece tipos, prompts de voz e o `fallbackCommunityData`, utilizado como reserva quando
+`loadCommunitySnapshot()` não consegue executar o orquestrador (ex.: ambientes sem `ts-node`).
 
 ## CLI (`packages/cli`)
 
@@ -299,6 +312,7 @@ permitir continuidade entre execuções e grava um novo snapshot ao final.
 | `--no-persist` | Evita gravar o snapshot atualizado ao término da execução. |
 | `--preset <nome>` | Carrega um preset embutido (`sample`, `community-sprint`, `p2p-sync`) sem precisar informar o arquivo. |
 | `--list-presets` | Lista os presets disponíveis e encerra o comando imediatamente. |
+| `--verify` | Executa o orquestrador TypeScript em paralelo e compara métricas, contagens e participantes. |
 | `--participants a,b` | Gera destaques para ids/DIDs/rótulos informados no relatório (útil para auditorias focadas). |
 | `--log-file <path>` | Exporta todos os logs (`SimulationLogEntry[]`) para JSON e cria diretórios automaticamente. |
 
@@ -306,4 +320,7 @@ Além das estatísticas globais (`stats`), o relatório inclui `actors`: lista c
 Cada entrada registra contadores de publicações, ingestões, votos, digests, snapshots, sincronizações, assistências,
 transferências e erros associados. O array `logs` também adiciona o campo `actor` com o responsável pelo passo.
 Por fim, `snapshot` (feeds, inbox, ledger, propostas) e `state` (identidade, assinaturas conhecidas e buffers)
-seguem disponíveis para serialização em bancos de dados, IPFS ou replicação multi-máquina.
+seguem disponíveis para serialização em bancos de dados, IPFS ou replicação multi-máquina. Quando `--verify` é utilizado,
+o JSON também fornece `orchestrator` (relatório, snapshot e telemetria do orquestrador TypeScript) e `parity`, destacando
+se todas as métricas permaneceram alinhadas ou se há divergências a investigar. Instale `ts-node` e `typescript`
+(`pnpm add -D ts-node typescript`) para habilitar a execução paralela do orquestrador completo.

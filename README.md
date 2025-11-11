@@ -70,6 +70,7 @@ O diretório `apps/frontend` inaugura o protótipo da interface viva BEFREE usan
 - **Feed radial:** conteúdos aparecem como órbitas energéticas (`FeedOrb`) organizadas por reputação e energia social.
 - **IA presente:** o painel `JarbasPanel` sinaliza humor, status e recomendações acionáveis do assistente pessoal.
 - **Economia visível:** `ReputationCard` e `CirclePanel` oferecem leitura rápida de reputação, BFR distribuído e círculos cifrados.
+- **Snapshot vivo:** `loadCommunitySnapshot()` executa o orquestrador TypeScript com o cenário padrão, gera digest, reputação por participante e abastece o feed radial com dados reais do pipeline.
 - **Ações por voz:** `VoiceInput` alterna entre prompts e estado de escuta, preparando a camada de Web Speech/WebRTC futura.
 
 ### Iniciando
@@ -79,8 +80,9 @@ pnpm install
 pnpm --filter befree-frontend dev
 ```
 
-O comando inicia o servidor Next.js com hot reload. A página principal (`app/page.tsx`) apresenta a combinação do feed radial,
-painel do Jarbas, destaques de reputação e doca de ações. A folha de estilos em `styles/globals.css` aplica o visual
+O comando inicia o servidor Next.js com hot reload. A página principal (`app/page.tsx`) chama `loadCommunitySnapshot()`
+para executar rapidamente o orquestrador, gerar digest analítico e preencher os componentes client-side (`RadialFeed`,
+`JarbasPanel`, `ReputationCard`, `CirclePanel`) com dados vivos. A folha de estilos em `styles/globals.css` aplica o visual
 neo-minimalista com gradientes pulsantes descrito na nota de design.
 
 ## CLI
@@ -127,6 +129,9 @@ befree simulation:run --preset p2p-sync --participants guardioes,cartografo
 
 # Exportar todos os logs da execução para um arquivo dedicado
 befree simulation:run --preset community-sprint --log-file ./tmp/sprint-logs.json --json
+
+# Validar o cenário comparando com o orquestrador TypeScript oficial
+befree simulation:run --preset community-sprint --verify --json
 ```
 
 Por padrão o comando `simulation:run` restaura e salva o estado no arquivo `~/.befree/simulation-state.json`,
@@ -135,7 +140,9 @@ local customizado, `--reset` para iniciar do zero ignorando o arquivo e `--no-pe
 snapshot ao final. As flags `--preset` e `--list-presets` permitem alternar rapidamente entre cenários embutidos
 (`sample`, `community-sprint` e `p2p-sync`), enquanto `--participants` cria destaques por id/DID/rótulo no
 relatório final (útil para acompanhar atuação de guardiões específicos) e `--log-file` salva o histórico completo
-de passos em disco.
+de passos em disco. Ao habilitar `--verify`, o CLI executa o mesmo cenário no orquestrador TypeScript completo e
+apresenta diferenças de métricas e contagens para garantir paridade entre as implementações. Instale `ts-node`
+e `typescript` (`pnpm add -D ts-node typescript`) para ativar essa comparação.
 
 ## Orquestração rápida
 

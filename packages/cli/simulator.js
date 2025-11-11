@@ -9,6 +9,59 @@ const encoder = new TextEncoder();
 
 const deepClone = (value) => (value == null ? value : JSON.parse(JSON.stringify(value)));
 
+let tsRuntimeRegistered = false;
+let orchestratorModules;
+let tsRuntimeError;
+
+const ensureTsRuntime = () => {
+  if (tsRuntimeRegistered) return;
+  try {
+    // eslint-disable-next-line global-require
+    const { register } = require('ts-node');
+    register({
+      transpileOnly: true,
+      compilerOptions: {
+        module: 'CommonJS',
+        moduleResolution: 'node',
+        esModuleInterop: true,
+        resolveJsonModule: true,
+        target: 'ES2021',
+      },
+      project: require.resolve('../../tsconfig.json'),
+    });
+    tsRuntimeRegistered = true;
+    tsRuntimeError = undefined;
+  } catch (error) {
+    const message =
+      'Para comparar com o orquestrador real é necessário instalar ts-node e typescript no workspace raiz.';
+    const err = error instanceof Error ? error : new Error(String(error));
+    err.message = `${message} Detalhes: ${err.message}`;
+    tsRuntimeError = err;
+    throw err;
+  }
+};
+
+const loadOrchestratorModules = () => {
+  if (orchestratorModules) return orchestratorModules;
+  ensureTsRuntime();
+  // eslint-disable-next-line global-require
+  const simulation = require('../../sdk/simulation/index.ts');
+  // eslint-disable-next-line global-require
+  const platform = require('../../sdk/platform/index.ts');
+  orchestratorModules = { simulation, platform };
+  return orchestratorModules;
+};
+
+const canRunOrchestratorParity = () => {
+  if (tsRuntimeRegistered) return true;
+  try {
+    ensureTsRuntime();
+    return true;
+  } catch (error) {
+    return false;
+  }
+};
+
 const wait = async (ms) => {
   if (!ms || ms <= 0) return;
   await new Promise((resolve) => setTimeout(resolve, ms));
@@ -670,8 +723,33 @@ const createSampleScenario = () => ({
   ],
 });
 
+const runScenarioWithOrchestrator = async (scenario, options = {}) => {
+  const modules = loadOrchestratorModules();
+  const orchestrator = new modules.platform.CommunityOrchestrator({
+    label: options.label ?? 'CLI Orchestrator',
+    telemetryOptions: { bucket: 'cli-simulator' },
+  });
+  try {
+    const report = await modules.simulation.runSimulation(orchestrator, scenario, {
+      iterations: options.iterations,
+      delayMultiplier: options.delayMultiplier,
+      onStep: options.onStep,
+      signal: options.signal,
+    });
+    const snapshot = await orchestrator.snapshot();
+    const telemetry = orchestrator.getTelemetrySnapshot();
+    return { report, snapshot, telemetry };
+  } finally {
+    if (typeof orchestrator.stop === 'function') {
+      await orchestrator.stop();
+    }
+  }
+};
+
 module.exports = {
   runScenario,
   createSampleScenario,
   CommunitySimulator,
+  runScenarioWithOrchestrator,
+  canRunOrchestratorParity,
 };

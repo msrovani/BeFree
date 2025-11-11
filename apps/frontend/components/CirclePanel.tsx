@@ -1,8 +1,12 @@
 import React from 'react';
 
-import { circles } from '../lib/demoData';
+import type { CircleSnapshot } from '../lib/demoData';
 
-export function CirclePanel() {
+interface CirclePanelProps {
+  circles: CircleSnapshot[];
+}
+
+export function CirclePanel({ circles }: CirclePanelProps) {
   return (
     <section className="circle-panel">
       <header>

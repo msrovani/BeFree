@@ -1,10 +1,16 @@
+'use client';
+
 import React from 'react';
 
 import { useReputationMetrics } from '../hooks/useReputation';
-import { participants } from '../lib/demoData';
+import type { ParticipantProfile } from '../lib/demoData';
 
-export function ReputationCard() {
-  const metrics = useReputationMetrics();
+interface ReputationCardProps {
+  participants: ParticipantProfile[];
+}
+
+export function ReputationCard({ participants }: ReputationCardProps) {
+  const metrics = useReputationMetrics(participants);
 
   return (
     <section className="reputation-card">
@@ -23,7 +29,7 @@ export function ReputationCard() {
               <strong>{participant.displayName}</strong>
               <span>{participant.highlight}</span>
               <span className="reputation-card__meta">
-                {participant.reputation} rep · {participant.earnedBFR} BFR · sequência {participant.streak}
+                {participant.reputation} rep · {participant.earnedBFR.toFixed(2)} BFR · sequência {participant.streak}
               </span>
             </div>
           </li>

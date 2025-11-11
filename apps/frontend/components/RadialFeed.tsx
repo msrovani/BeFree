@@ -1,11 +1,17 @@
+'use client';
+
 import React from 'react';
 
 import { usePulseLayout } from '../hooks/usePulseLayout';
-import { pulses } from '../lib/demoData';
+import type { Pulse } from '../lib/demoData';
 
 import { FeedOrb } from './FeedOrb';
 
-export function RadialFeed() {
+interface RadialFeedProps {
+  pulses: Pulse[];
+}
+
+export function RadialFeed({ pulses }: RadialFeedProps) {
   const positioned = usePulseLayout(pulses);
 
   return (

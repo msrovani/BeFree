@@ -3,7 +3,7 @@ const { mkdirSync, readFileSync, writeFileSync, existsSync } = require('fs');
 const { join, resolve, isAbsolute, dirname } = require('path');
 
 const { createIdentity } = require('./lib/identity');
-const { runScenario, createSampleScenario } = require('./simulator');
+const { runScenario, createSampleScenario, runScenarioWithOrchestrator } = require('./simulator');
 
 const DATA_DIR = join(process.env.HOME ?? process.cwd(), '.befree');
 const IDENTITY_FILE = join(DATA_DIR, 'identity.json');
@@ -143,6 +143,52 @@ const findActorByQuery = (actors, query) => {
   );
 };
 
+const normalizeNumber = (value) => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'bigint') return Number(value);
+  return 0;
+};
+
+const diffStats = (baseline = {}, reference = {}) => {
+  const keys = new Set([...Object.keys(baseline), ...Object.keys(reference)]);
+  return [...keys].map((key) => {
+    const cliValue = normalizeNumber(baseline[key]);
+    const orchestratorValue = normalizeNumber(reference[key]);
+    return {
+      metric: key,
+      cli: cliValue,
+      orchestrator: orchestratorValue,
+      delta: cliValue - orchestratorValue,
+    };
+  });
+};
+
+const summarizeCount = (cliValue, orchestratorValue) => ({
+  cli: cliValue,
+  orchestrator: orchestratorValue,
+  delta: cliValue - orchestratorValue,
+});
+
+const compareReports = (cliReport, orchestratorReport) => {
+  if (!cliReport || !orchestratorReport) return undefined;
+  const stats = diffStats(cliReport.stats ?? {}, orchestratorReport.stats ?? {});
+  const counts = {
+    logs: summarizeCount(cliReport.logs?.length ?? 0, orchestratorReport.logs?.length ?? 0),
+    proposals: summarizeCount(cliReport.proposals?.length ?? 0, orchestratorReport.proposals?.length ?? 0),
+    participants: summarizeCount(
+      cliReport.participants?.length ?? 0,
+      orchestratorReport.participants?.length ?? 0
+    ),
+  };
+  const statsAligned = stats.every((entry) => entry.delta === 0);
+  const countsAligned = Object.values(counts).every((entry) => entry.delta === 0);
+  return {
+    consistent: statsAligned && countsAligned,
+    stats,
+    counts,
+  };
+};
+
 const command = process.argv[2];
 const args = process.argv.slice(3);
 
@@ -219,6 +265,31 @@ const commands = {
       simulatorOptions: { state: initialState },
     });
 
+    const wantsParity = Boolean(
+      flags.verify ||
+        flags.compare ||
+        flags.parity ||
+        flags['with-orchestrator'] ||
+        flags['compare-orchestrator']
+    );
+
+    let orchestratorRun;
+    let parity;
+    if (wantsParity) {
+      try {
+        orchestratorRun = await runScenarioWithOrchestrator(scenario, {
+          iterations,
+          delayMultiplier,
+        });
+        parity = compareReports(report, orchestratorRun.report);
+      } catch (error) {
+        const message =
+          'Falha ao executar o orquestrador completo para comparação. Certifique-se de instalar ts-node e typescript com pnpm.';
+        const reason = error instanceof Error ? error.message : String(error);
+        throw new Error(`${message} Detalhes: ${reason}`);
+      }
+    }
+
     let savedLogPath;
     if (flags['log-file']) {
       const target = toAbsolutePath(flags['log-file']);
@@ -256,6 +327,14 @@ const commands = {
         restored: Boolean(initialState),
         highlights,
         logFile: savedLogPath,
+        orchestrator: orchestratorRun
+          ? {
+              report: orchestratorRun.report,
+              snapshot: orchestratorRun.snapshot,
+              telemetry: orchestratorRun.telemetry,
+            }
+          : undefined,
+        parity,
       };
       console.log(format(enriched));
       return;
@@ -271,6 +350,13 @@ const commands = {
       atores: (report.actors ?? []).length,
       restoredState: Boolean(initialState),
       persistedState: flags['no-persist'] ? false : stateFile,
+      paridade: parity
+        ? {
+            consistente: parity.consistent,
+            metricasDivergentes: parity.stats.filter((entry) => entry.delta !== 0),
+            contagens: parity.counts,
+          }
+        : undefined,
     };
 
     const recentLogs = report.logs
@@ -313,6 +399,13 @@ const commands = {
         destaques: destaqueEncontrado,
         destaquesNaoEncontrados: destaqueNaoEncontrado,
         logsSalvosEm: savedLogPath,
+        orquestrador: orchestratorRun
+          ? {
+              stats: orchestratorRun.report.stats,
+              propostas: orchestratorRun.report.proposals.length,
+              participantes: orchestratorRun.report.participants.length,
+            }
+          : undefined,
       })
     );
   },
@@ -335,6 +428,7 @@ const commands = {
         '  --no-persist       Não salva o estado ao final da execução\n' +
         '  --preset <nome>    Usa um preset embutido (sample, community-sprint, p2p-sync)\n' +
         '  --list-presets     Lista presets disponíveis e encerra\n' +
+        '  --verify           Compara resultados com o orquestrador TypeScript oficial\n' +
         '  --participants a,b Destaca participantes (id, DID ou rótulo) no relatório\n' +
         '  --log-file <path>  Exporta todos os logs da execução para um arquivo JSON\n'
     );

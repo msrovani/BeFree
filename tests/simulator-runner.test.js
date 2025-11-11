@@ -1,7 +1,13 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { runScenario, createSampleScenario, CommunitySimulator } = require('../packages/cli/simulator');
+const {
+  runScenario,
+  createSampleScenario,
+  CommunitySimulator,
+  runScenarioWithOrchestrator,
+  canRunOrchestratorParity,
+} = require('../packages/cli/simulator');
 
 const scenario = {
   name: 'Smoke test runner',
@@ -122,3 +128,26 @@ test('relatório inclui estatísticas por ator e destaque de participantes', asy
   assert.ok(participantEntry);
   assert.equal(participantEntry.stats.ingested, 1);
 });
+
+if (!canRunOrchestratorParity()) {
+  test.skip('simulador CLI mantém paridade de métricas com o orquestrador TypeScript', () => {});
+} else {
+  test('simulador CLI mantém paridade de métricas com o orquestrador TypeScript', async () => {
+    const sample = createSampleScenario();
+    const cliReport = await runScenario(sample, { iterations: 2 });
+    const orchestratorRun = await runScenarioWithOrchestrator(sample, { iterations: 2 });
+    const orchestratorReport = orchestratorRun.report;
+
+    const metrics = new Set([
+      ...Object.keys(cliReport.stats ?? {}),
+      ...Object.keys(orchestratorReport.stats ?? {}),
+    ]);
+
+    for (const metric of metrics) {
+      assert.equal(cliReport.stats[metric], orchestratorReport.stats[metric], `Métrica divergente: ${metric}`);
+    }
+
+    assert.equal(cliReport.proposals.length, orchestratorReport.proposals.length);
+    assert.equal(cliReport.participants.length, orchestratorReport.participants.length);
+  });
+}

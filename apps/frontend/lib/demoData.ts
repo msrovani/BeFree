@@ -1,7 +1,9 @@
+export type PulseRole = 'guardian' | 'artesao' | 'oraculo' | 'explorador';
+
 export interface Pulse {
   id: string;
   author: string;
-  authorRole: 'guardian' | 'artesao' | 'oraculo' | 'explorador';
+  authorRole: PulseRole;
   reputation: number;
   energy: number;
   summary: string;
@@ -9,6 +11,7 @@ export interface Pulse {
   aiAssisted?: boolean;
   capturedAt: string;
   sentiment: 'positivo' | 'neutro' | 'alerta';
+  sourceDid?: string;
 }
 
 export interface ParticipantProfile {
@@ -20,6 +23,7 @@ export interface ParticipantProfile {
   earnedBFR: number;
   streak: number;
   highlight: string;
+  did?: string;
 }
 
 export interface JarbasInsight {
@@ -39,7 +43,48 @@ export interface CircleSnapshot {
   vibe: string;
 }
 
-export const pulses: Pulse[] = [
+export interface CommunitySummary {
+  digestSummary: string;
+  timeframe: {
+    from: string;
+    to: string;
+    windowMs: number;
+  };
+  totals: {
+    published: number;
+    inbox: number;
+    uniqueAuthors: number;
+  };
+  host: string;
+}
+
+export interface LiveCommunityData {
+  pulses: Pulse[];
+  participants: ParticipantProfile[];
+  insights: JarbasInsight[];
+  circles: CircleSnapshot[];
+  summary: CommunitySummary;
+}
+
+const now = new Date('2025-11-07T14:30:00Z');
+
+const fallbackSummary: CommunitySummary = {
+  digestSummary:
+    'Jarbas registrou alta ressonância coletiva nas últimas 24h, com destaque para acolhimento e coordenação de círculos.',
+  timeframe: {
+    from: new Date(now.getTime() - 1000 * 60 * 60 * 24).toISOString(),
+    to: now.toISOString(),
+    windowMs: 1000 * 60 * 60 * 24,
+  },
+  totals: {
+    published: 18,
+    inbox: 6,
+    uniqueAuthors: 9,
+  },
+  host: 'Lyra — Guardiã da Rede',
+};
+
+const fallbackPulses: Pulse[] = [
   {
     id: 'pulse-guardian-01',
     author: 'Lyra',
@@ -99,7 +144,7 @@ export const pulses: Pulse[] = [
   },
 ];
 
-export const participants: ParticipantProfile[] = [
+const fallbackParticipants: ParticipantProfile[] = [
   {
     id: 'participant-lyra',
     displayName: 'Lyra',
@@ -142,7 +187,7 @@ export const participants: ParticipantProfile[] = [
   },
 ];
 
-export const insights: JarbasInsight[] = [
+const fallbackInsights: JarbasInsight[] = [
   {
     id: 'insight-1',
     title: 'Resonância Coletiva Alta',
@@ -165,7 +210,7 @@ export const insights: JarbasInsight[] = [
   },
 ];
 
-export const circles: CircleSnapshot[] = [
+const fallbackCircles: CircleSnapshot[] = [
   {
     id: 'circle-guardian',
     title: 'Rituais de Cuidado',
@@ -191,6 +236,14 @@ export const circles: CircleSnapshot[] = [
     vibe: 'Exploração técnica contínua',
   },
 ];
+
+export const fallbackCommunityData: LiveCommunityData = {
+  pulses: fallbackPulses,
+  participants: fallbackParticipants,
+  insights: fallbackInsights,
+  circles: fallbackCircles,
+  summary: fallbackSummary,
+};
 
 export const voicePrompts = [
   'Jarbas, quais círculos precisam de atenção agora?',

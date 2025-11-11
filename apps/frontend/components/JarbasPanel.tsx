@@ -1,21 +1,29 @@
+'use client';
+
 import React from 'react';
 
 import { useJarbasPresence } from '../hooks/useJarbasPresence';
+import type { JarbasInsight } from '../lib/demoData';
+import type { JarbasPresence } from '../hooks/useJarbasPresence';
 
-const MOOD_LABEL: Record<ReturnType<typeof useJarbasPresence>['mood'], string> = {
+const MOOD_LABEL: Record<JarbasPresence['mood'], string> = {
   sereno: 'Sereno',
   vibrante: 'Vibrante',
   alerta: 'Alerta',
 };
 
-const STATUS_LABEL: Record<ReturnType<typeof useJarbasPresence>['status'], string> = {
+const STATUS_LABEL: Record<JarbasPresence['status'], string> = {
   escutando: 'Escutando',
   respondendo: 'Respondendo',
   ocioso: 'Ocioso',
 };
 
-export function JarbasPanel() {
-  const presence = useJarbasPresence();
+interface JarbasPanelProps {
+  insights: JarbasInsight[];
+}
+
+export function JarbasPanel({ insights }: JarbasPanelProps) {
+  const presence = useJarbasPresence(insights);
 
   return (
     <section className="jarbas">

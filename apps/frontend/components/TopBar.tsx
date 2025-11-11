@@ -1,6 +1,9 @@
+'use client';
+
 import React from 'react';
 
 import { useWallet } from '../hooks/useWallet';
+import type { CommunitySummary } from '../lib/demoData';
 
 const items = [
   { label: 'JARBAS', icon: '🧠' },
@@ -11,7 +14,11 @@ const items = [
   { label: 'Configurações', icon: '⚙️' },
 ];
 
-export function TopBar() {
+interface TopBarProps {
+  summary: CommunitySummary;
+}
+
+export function TopBar({ summary }: TopBarProps) {
   const wallet = useWallet();
 
   return (
@@ -31,6 +38,12 @@ export function TopBar() {
           </button>
         ))}
       </nav>
+      <div className="topbar__summary" aria-live="polite">
+        <span className="topbar__summaryDigest">{summary.digestSummary}</span>
+        <span className="topbar__summaryStats">
+          {summary.totals.published} pulses · {summary.totals.uniqueAuthors} autores · host {summary.host}
+        </span>
+      </div>
       <div className="topbar__wallet">
         {wallet.connected ? (
           <button type="button" onClick={wallet.disconnect} className="topbar__walletButton connected">
