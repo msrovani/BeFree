@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <radialGradient id="maskPulse" cx="50%" cy="40%" r="70%">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.95" />
+      <stop offset="55%" stop-color="#8b5cf6" stop-opacity="0.8" />
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="128" fill="#04070d" />
+  <circle cx="256" cy="232" r="216" fill="url(#maskPulse)" />
+  <path d="M112 272c48-80 96-120 144-120s96 40 144 120" stroke="#fbbf24" stroke-width="24" stroke-linecap="round" stroke-linejoin="round" opacity="0.85" />
+  <path d="M176 288c24-40 48-60 80-60s56 20 80 60" stroke="#22c55e" stroke-width="18" stroke-linecap="round" stroke-linejoin="round" opacity="0.75" />
+  <circle cx="256" cy="232" r="56" fill="#38bdf8" opacity="0.85" />
+  <path d="M256 172c-20 0-36 16-36 36s16 36 36 36 36-16 36-36-16-36-36-36zm0 20c8.8 0 16 7.2 16 16s-7.2 16-16 16-16-7.2-16-16 7.2-16 16-16z" fill="#f8fafc" opacity="0.95" />
+</svg>
