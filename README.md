@@ -54,6 +54,7 @@ befree-os/
 - **P2P:** nó em memória com broadcast, request/response e eventos de presença.
 - **Economia:** livro razão local com emissões simuladas do tesouro e transferências.
 - **IA:** sumarização, extração de palavras-chave e busca semântica determinística.
+- **Persona JARBAS:** prompt operacional canônico com memória evolutiva, validadores de saída e helpers de atualização exportados por `sdk/ai/jarbasPersona` e reutilizados no CLI/frontend.
 - **Conteúdo:** classificação de selos e checagens básicas de moderação.
 - **Reputação:** registro de eventos com decaimento exponencial e ranking local.
 - **Orquestração:** pipeline integrado que conecta identidade, reputação, economia e IA em transmissões P2P assinadas, com diário local de publicações, inbox sincronizável e persistência opcional em disco.
@@ -66,15 +67,17 @@ befree-os/
 ## Frontend sensorial (preview)
 O diretório `apps/frontend` inaugura o protótipo da interface viva BEFREE usando Next.js 15 com foco em experiências não lineares.
 
-> Confira o manifesto visual completo em [`docs/prompts/frontend-vision.md`](docs/prompts/frontend-vision.md) para reutilizar o prompt que guia a versão V2 do design.
-
 ### Conceitos
-- **Feed radial:** conteúdos aparecem como órbitas energéticas (`FeedOrb`) organizadas por reputação e energia social.
-- **IA presente:** o painel `JarbasPanel` sinaliza humor, status e recomendações acionáveis do assistente pessoal.
-- **Economia visível:** `ReputationCard` e `CirclePanel` oferecem leitura rápida de reputação, BFR distribuído e círculos cifrados.
+- **Feed radial vivo:** conteúdos aparecem como órbitas energéticas (`FeedOrb`) com auras holográficas, badges de reputação e pulsos visuais que variam conforme humor social.
+- **Topbar holográfica:** a navegação `TopBar` combina digest do Jarbas, medidor de sinal BFR e atalhos para feed, círculos, IA e recompensas em layout glassmorphism responsivo.
+- **IA presente:** o painel `JarbasPanel` agora exibe avatar animado por humor, mantra guiado e cards com ícones de tom, reforçando a presença emocional do assistente pessoal.
+- **Persona manifesta:** o `JarbasPanel` mostra missão, traços, compromissos “NUNCA/SEMPRE”, memória ativa e um botão para copiar o prompt oficial do Jarbas, garantindo respostas alinhadas ao novo protocolo comportamental.
+- **Atmosfera personalizada:** o `PersonalizationPanel` permite alternar temas (neo, sol nascente, noir), intensidade das animações, voz do Jarbas, filtros de feed e ativar/desativar trilha/háptica ao vivo.
+- **Economia visível:** `ReputationCard` e `CirclePanel` trazem trilhas energéticas, metros de confiança e distribuição de BFR em destaque.
 - **Snapshot vivo:** `loadCommunitySnapshot()` executa o orquestrador TypeScript com o cenário padrão, gera digest, reputação por participante e abastece o feed radial com dados reais do pipeline.
-- **Ações por voz:** `VoiceInput` alterna entre prompts e estado de escuta, preparando a camada de Web Speech/WebRTC futura.
-- **Sensório holográfico:** animações ao estilo Framer Motion via keyframes dedicados, glassmorphism neo-orgânico e feedbacks sonoros Web Audio reforçam o clima vivo descrito pelo prompt.
+- **Ações por voz:** `VoiceInput` alterna entre prompts e estado de escuta com novo orbe luminoso, preparando a camada de Web Speech/WebRTC futura.
+- **Sensory Engine:** o `JarbasPanel` injeta trilha ambiente reativa, TTS em português e vibração opcional conforme o humor/status do assistente, sincronizando os sons do feed com as preferências escolhidas.
+- **PWA pronta:** o workspace traz `manifest.webmanifest`, ícones maskable, service worker e cache básico para navegação offline/instalação em dispositivos móveis.
 
 ### Iniciando
 
@@ -85,8 +88,10 @@ pnpm --filter befree-frontend dev
 
 O comando inicia o servidor Next.js com hot reload. A página principal (`app/page.tsx`) chama `loadCommunitySnapshot()`
 para executar rapidamente o orquestrador, gerar digest analítico e preencher os componentes client-side (`RadialFeed`,
-`JarbasPanel`, `ReputationCard`, `CirclePanel`) com dados vivos. A folha de estilos em `styles/globals.css` aplica o visual
-neo-orgânico com gradientes holográficos, halos responsivos e microanimações integradas ao feedback sonoro experimental do `ActionDock`.
+`JarbasPanel`, `ReputationCard`, `CirclePanel`) com dados vivos. A folha de estilos em `styles/globals.css` aplica o
+tema dark neo-orgânico descrito na nota de design, agora ligado a controles `data-theme`, `data-motion` e `data-feed-filter`
+sincronizados com o painel de personalização. Instale a PWA (manifesto + service worker) para manter o feed radial e o Jarbas
+acessíveis mesmo offline.
 
 ## CLI
 Instale dependências e linke o CLI:

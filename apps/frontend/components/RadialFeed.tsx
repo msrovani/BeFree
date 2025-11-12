@@ -16,8 +16,11 @@ export function RadialFeed({ pulses }: RadialFeedProps) {
 
   return (
     <section className="radial-feed">
-      <div className="radial-feed__halo" />
-      <div className="radial-feed__halo halo--outer" />
+      <div className="radial-feed__backdrop" aria-hidden>
+        <span className="radial-feed__halo" />
+        <span className="radial-feed__halo halo--outer" />
+        <span className="radial-feed__grid" />
+      </div>
       <div className="radial-feed__orbs">
         {positioned.map((pulse) => (
           <FeedOrb key={pulse.id} pulse={pulse} />

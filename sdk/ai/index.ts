@@ -93,3 +93,19 @@ export const detectIntent = async (text: string) => {
   if (/(denúncia|report|flag)/.test(lowered)) return 'moderation';
   return 'general';
 };
+
+export {
+  JARBAS_PERSONA,
+  defaultJarbasMemory,
+  buildJarbasSystemPrompt,
+  evolveJarbasMemory,
+  registerJarbasResponse,
+  validateJarbasResponse,
+} from './jarbasPersona';
+
+export type {
+  JarbasPersonaSpec,
+  JarbasMemoryState,
+  JarbasPromptOptions,
+  JarbasResponseValidation,
+} from './jarbasPersona';

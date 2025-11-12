@@ -1,3 +1,12 @@
+const {
+  JARBAS_PERSONA,
+  defaultJarbasMemory,
+  buildJarbasSystemPrompt,
+  evolveJarbasMemory,
+  registerJarbasResponse,
+  validateJarbasResponse,
+} = require('./jarbasPersona');
+
 const SENTENCE_DELIMITERS = /(?<=[.!?])\s+/g;
 const STOPWORDS = new Set(
   'a,ao,aos,à,às,o,os,as,e,é,do,da,dos,das,de,em,um,uma,uns,umas,que,como,para,por,com,sem,se,na,no,nos,nas,os,das'.split(',')
@@ -57,4 +66,10 @@ module.exports = {
   summarize,
   extractKeywords,
   detectIntent,
+  JARBAS_PERSONA,
+  defaultJarbasMemory,
+  buildJarbasSystemPrompt,
+  evolveJarbasMemory,
+  registerJarbasResponse,
+  validateJarbasResponse,
 };

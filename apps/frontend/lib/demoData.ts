@@ -1,3 +1,10 @@
+import {
+  JARBAS_PERSONA,
+  buildJarbasSystemPrompt,
+  defaultJarbasMemory,
+  type JarbasMemoryState,
+} from '../../../sdk/ai/jarbasPersona';
+
 export type PulseRole = 'guardian' | 'artesao' | 'oraculo' | 'explorador';
 
 export interface Pulse {
@@ -12,6 +19,7 @@ export interface Pulse {
   capturedAt: string;
   sentiment: 'positivo' | 'neutro' | 'alerta';
   sourceDid?: string;
+  origin?: 'published' | 'inbox';
 }
 
 export interface ParticipantProfile {
@@ -58,15 +66,52 @@ export interface CommunitySummary {
   host: string;
 }
 
+export interface JarbasPersonaSnapshot {
+  name: string;
+  tagline: string;
+  mission: string;
+  tone: string;
+  traits: string[];
+  commitments: {
+    never: string[];
+    always: string[];
+  };
+  bestPractices: string[];
+  advancedModes: Record<string, string>;
+}
+
 export interface LiveCommunityData {
   pulses: Pulse[];
   participants: ParticipantProfile[];
   insights: JarbasInsight[];
   circles: CircleSnapshot[];
   summary: CommunitySummary;
+  persona: JarbasPersonaSnapshot;
+  jarbasMemory: JarbasMemoryState;
+  personaPrompt: string;
 }
 
 const now = new Date('2025-11-07T14:30:00Z');
+
+const fallbackMemory: JarbasMemoryState = {
+  ...defaultJarbasMemory,
+  recentPhrases: [...defaultJarbasMemory.recentPhrases],
+  recentInteractions: [...defaultJarbasMemory.recentInteractions],
+};
+
+const fallbackPersona: JarbasPersonaSnapshot = {
+  name: JARBAS_PERSONA.name,
+  tagline: JARBAS_PERSONA.tagline,
+  mission: JARBAS_PERSONA.mission,
+  tone: JARBAS_PERSONA.tone.description,
+  traits: [...JARBAS_PERSONA.traits],
+  commitments: {
+    never: [...JARBAS_PERSONA.commitments.never],
+    always: [...JARBAS_PERSONA.commitments.always],
+  },
+  bestPractices: [...JARBAS_PERSONA.bestPractices],
+  advancedModes: { ...JARBAS_PERSONA.advancedModes },
+};
 
 const fallbackSummary: CommunitySummary = {
   digestSummary:
@@ -95,6 +140,7 @@ const fallbackPulses: Pulse[] = [
     tags: ['acolhimento', 'governança', 'pacto'],
     capturedAt: '2025-11-07T14:20:00Z',
     sentiment: 'positivo',
+    origin: 'published',
   },
   {
     id: 'pulse-art-02',
@@ -107,6 +153,7 @@ const fallbackPulses: Pulse[] = [
     capturedAt: '2025-11-07T13:40:00Z',
     aiAssisted: true,
     sentiment: 'positivo',
+    origin: 'published',
   },
   {
     id: 'pulse-oracle-03',
@@ -119,6 +166,7 @@ const fallbackPulses: Pulse[] = [
     capturedAt: '2025-11-07T12:00:00Z',
     aiAssisted: true,
     sentiment: 'neutro',
+    origin: 'published',
   },
   {
     id: 'pulse-explorer-04',
@@ -130,6 +178,7 @@ const fallbackPulses: Pulse[] = [
     tags: ['p2p', 'rede', 'beta'],
     capturedAt: '2025-11-07T11:30:00Z',
     sentiment: 'positivo',
+    origin: 'published',
   },
   {
     id: 'pulse-guardian-05',
@@ -141,6 +190,7 @@ const fallbackPulses: Pulse[] = [
     tags: ['círculos', 'cuidado', 'prioridade'],
     capturedAt: '2025-11-07T10:45:00Z',
     sentiment: 'alerta',
+    origin: 'published',
   },
 ];
 
@@ -243,6 +293,9 @@ export const fallbackCommunityData: LiveCommunityData = {
   insights: fallbackInsights,
   circles: fallbackCircles,
   summary: fallbackSummary,
+  persona: fallbackPersona,
+  jarbasMemory: fallbackMemory,
+  personaPrompt: buildJarbasSystemPrompt({ memory: fallbackMemory }),
 };
 
 export const voicePrompts = [

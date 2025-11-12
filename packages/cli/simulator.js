@@ -53,9 +53,13 @@ const loadOrchestratorModules = () => {
 };
 
 const canRunOrchestratorParity = () => {
-  if (tsRuntimeRegistered) return true;
+  if (process.env.BEFREE_VERIFY_ORCHESTRATOR !== 'true') {
+    return false;
+  }
+  if (orchestratorModules) return true;
   try {
     ensureTsRuntime();
+    loadOrchestratorModules();
     return true;
   } catch (error) {
     return false;

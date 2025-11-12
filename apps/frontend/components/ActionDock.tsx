@@ -1,33 +1,49 @@
-import React, { useCallback } from 'react';
+import React from 'react';
 
 import { VoiceInput } from './VoiceInput';
 import { CaptureButton } from './CaptureButton';
-import { useSonicFeedback } from '../hooks/useSonicFeedback';
 
-export function ActionDock() {
-  const { trigger, arm, isSupported } = useSonicFeedback();
+interface ActionDockProps {
+  onOpenPreferences: () => void;
+  onPulse?: () => void;
+}
 
-  const handleNewPulse = useCallback(() => {
-    void trigger('publish');
-  }, [trigger]);
-
-  const handleCircle = useCallback(() => {
-    void trigger('burn');
-  }, [trigger]);
-
+export function ActionDock({ onOpenPreferences, onPulse }: ActionDockProps) {
   return (
-    <section className="action-dock" onMouseEnter={() => void arm()} onTouchStart={() => void arm()}>
-      <VoiceInput />
-      <button type="button" className="action-dock__button primary" onClick={handleNewPulse}>
-        <span>+ Novo pulse</span>
-      </button>
-      <CaptureButton />
-      <button type="button" className="action-dock__button subtle" onClick={handleCircle}>
-        🔒 Círculo fechado
-      </button>
-      {isSupported ? null : (
-        <span className="action-dock__hint">Seu navegador não suporta feedback sonoro experimental.</span>
-      )}
+    <section className="action-dock">
+      <div className="action-dock__voice">
+        <VoiceInput onPulse={onPulse} />
+      </div>
+      <div className="action-dock__buttons">
+        <button type="button" className="action-dock__button primary" onClick={onPulse}>
+          <span className="action-dock__buttonIcon" aria-hidden>
+            ✨
+          </span>
+          <span>
+            Emana novo pulse
+            <small>energize a rede com sua voz</small>
+          </span>
+        </button>
+        <CaptureButton />
+        <button type="button" className="action-dock__button ghost">
+          <span className="action-dock__buttonIcon" aria-hidden>
+            🛡️
+          </span>
+          <span>
+            Círculo íntimo
+            <small>ativar espaço cifrado</small>
+          </span>
+        </button>
+        <button type="button" className="action-dock__button subtle" onClick={onOpenPreferences}>
+          <span className="action-dock__buttonIcon" aria-hidden>
+            🎛️
+          </span>
+          <span>
+            Personalizar atmosfera
+            <small>sons, temas e filtros</small>
+          </span>
+        </button>
+      </div>
     </section>
   );
 }

@@ -21,6 +21,13 @@ import {
   type Pulse,
   type PulseRole,
 } from './demoData';
+import {
+  buildJarbasSystemPrompt,
+  defaultJarbasMemory,
+  evolveJarbasMemory,
+  registerJarbasResponse,
+  type JarbasMemoryState,
+} from '../../../sdk/ai/jarbasPersona';
 
 export interface CommunityBridgeOptions {
   scenario?: SimulationScenario;
@@ -28,6 +35,14 @@ export interface CommunityBridgeOptions {
 }
 
 const ROLE_CYCLE: PulseRole[] = ['guardian', 'artesao', 'oraculo', 'explorador'];
+
+const cloneCommunityData = (): LiveCommunityData => {
+  const clone = (globalThis as { structuredClone?: <T>(value: T) => T }).structuredClone;
+  if (typeof clone === 'function') {
+    return clone(fallbackCommunityData);
+  }
+  return JSON.parse(JSON.stringify(fallbackCommunityData)) as LiveCommunityData;
+};
 
 const ROLE_KEYWORDS: Record<PulseRole, string[]> = {
   guardian: ['cuidado', 'acolhimento', 'ritual', 'saúde', 'cura', 'mentoria'],
@@ -161,6 +176,7 @@ const buildPulses = async (
       capturedAt: new Date(envelope.timestamp).toISOString(),
       sentiment: inferSentiment(tags, envelope.result?.intent),
       sourceDid: envelope.author.did,
+      origin: source.origin,
     };
     pulses.push(pulse);
 
@@ -189,7 +205,7 @@ const buildPulses = async (
 const highlightForRole = (role: PulseRole, published: number, received: number) => {
   switch (role) {
     case 'guardian':
-      return published > received ? 'Guardiã da Cuidado Vivo' : 'Guardião das trocas seguras';
+      return published > received ? 'Guardiã do Cuidado Vivo' : 'Guardião das trocas seguras';
     case 'artesao':
       return published >= received ? 'Artesão da Proveniência' : 'Artífice colaborativo';
     case 'oraculo':
@@ -364,10 +380,47 @@ export const loadCommunitySnapshot = async (
     const insights = buildInsights(digest, snapshot);
     const summary = buildSummary(digest, snapshot);
 
-    return { pulses, participants, circles, insights, summary };
+    const baseMemory: JarbasMemoryState = {
+      ...defaultJarbasMemory,
+      recentPhrases: [...defaultJarbasMemory.recentPhrases],
+      recentInteractions: [...defaultJarbasMemory.recentInteractions],
+    };
+
+    const topTag = digest.tags[0];
+    const evolvedMemory = evolveJarbasMemory(baseMemory, {
+      context: `Digest com ${summary.totals.published} pulsos e ${summary.totals.uniqueAuthors} autores ativos.`,
+      evolution: topTag
+        ? `Aprendizado: foco emergente em #${topTag.tag} com ${topTag.count} pulsos recentes.`
+        : 'Aprendizado: manter vigilância sobre círculos ativos sem tendência dominante.',
+      preferences: 'Usuário aprecia visão radial com bullets e recomendações acionáveis.',
+    });
+
+    const insightsSummary = insights.map((insight) => `${insight.title}: ${insight.detail}`).join('. ');
+    const memory = registerJarbasResponse(evolvedMemory, insightsSummary, summary.digestSummary);
+    const personaPrompt = buildJarbasSystemPrompt({
+      memory,
+      conversationSummary: summary.digestSummary,
+      userIntent: 'community-overview',
+      userEmotion: digest.totals.published >= digest.totals.inbox ? 'confiante' : 'atento',
+      urgency: digest.totals.inbox > digest.totals.published / 2 ? 'medium' : 'low',
+      channel: 'text',
+    });
+
+    const persona = {
+      ...fallbackCommunityData.persona,
+      traits: [...fallbackCommunityData.persona.traits],
+      commitments: {
+        never: [...fallbackCommunityData.persona.commitments.never],
+        always: [...fallbackCommunityData.persona.commitments.always],
+      },
+      bestPractices: [...fallbackCommunityData.persona.bestPractices],
+      advancedModes: { ...fallbackCommunityData.persona.advancedModes },
+    };
+
+    return { pulses, participants, circles, insights, summary, persona, jarbasMemory: memory, personaPrompt };
   } catch (error) {
     console.error('Falha ao carregar snapshot vivo, usando dados de fallback.', error);
-    return fallbackCommunityData;
+    return cloneCommunityData();
   } finally {
     resetLedger();
     clearEvents();

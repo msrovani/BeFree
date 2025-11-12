@@ -11,6 +11,20 @@ export interface JarbasPresence {
   activityLevel: number;
 }
 
+const STATUS_CYCLE: JarbasPresence['status'][] = ['escutando', 'respondendo', 'ocioso'];
+
+const MOOD_FOR_STATUS: Record<JarbasPresence['status'], JarbasPresence['mood']> = {
+  escutando: 'sereno',
+  respondendo: 'vibrante',
+  ocioso: 'alerta',
+};
+
+const ACTIVITY_FOR_STATUS: Record<JarbasPresence['status'], number> = {
+  escutando: 0.68,
+  respondendo: 0.92,
+  ocioso: 0.52,
+};
+
 export function useJarbasPresence(initialInsights: JarbasInsight[]): JarbasPresence {
   const [tick, setTick] = useState(0);
 
@@ -24,10 +38,9 @@ export function useJarbasPresence(initialInsights: JarbasInsight[]): JarbasPrese
   }, [initialInsights]);
 
   return useMemo(() => {
-    const phase = tick % 3;
-    const status: JarbasPresence['status'] = phase === 0 ? 'escutando' : phase === 1 ? 'respondendo' : 'ocioso';
-    const mood: JarbasPresence['mood'] = phase === 2 ? 'sereno' : phase === 1 ? 'vibrante' : 'alerta';
-    const activityLevel = Number((0.6 + (phase === 1 ? 0.3 : phase === 2 ? 0.1 : 0)).toFixed(2));
+    const status = STATUS_CYCLE[tick % STATUS_CYCLE.length];
+    const mood = MOOD_FOR_STATUS[status];
+    const activityLevel = Number(ACTIVITY_FOR_STATUS[status].toFixed(2));
     const rotated =
       initialInsights.length === 0
         ? []

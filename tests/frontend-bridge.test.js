@@ -26,6 +26,9 @@ if (!tsRuntimeAvailable) {
     assert.ok(hasContent(snapshot.participants), 'espera participantes vivos');
     assert.ok(hasContent(snapshot.insights), 'espera insights do Jarbas');
     assert.ok(snapshot.summary.host, 'host do digest deve estar definido');
+    assert.ok(snapshot.personaPrompt, 'prompt operacional deve ser gerado');
+    assert.ok(snapshot.persona?.traits?.length, 'persona precisa listar traços');
+    assert.ok(snapshot.jarbasMemory?.context, 'memória ativa precisa de contexto');
 
     const firstPulse = snapshot.pulses[0];
     assert.ok(firstPulse.summary && firstPulse.sourceDid, 'pulse deve carregar resumo e DID de origem');
@@ -44,6 +47,7 @@ if (!tsRuntimeAvailable) {
 
     const snapshot = await loadCommunitySnapshot({ scenario: invalidScenario });
 
-    assert.strictEqual(snapshot, fallbackCommunityData);
+    assert.deepEqual(snapshot, fallbackCommunityData);
+    assert.ok(snapshot.personaPrompt.includes('Você é JARBAS'), 'prompt padrão preservado');
   });
 }

@@ -59,6 +59,14 @@ Retorna as palavras-chave mais frequentes, desconsiderando stopwords.
 ### `semanticSearch(query, documents, topK?)`
 Aplica busca semântica aproximada usando embeddings determinísticos hash-based.
 
+### Persona JARBAS (`jarbasPersona`)
+- `JARBAS_PERSONA`: objeto com missão, traços, compromissos “NUNCA/SEMPRE”, modos avançados e melhores práticas do assistente.
+- `defaultJarbasMemory`: memória inicial com contexto da comunidade, evolução e preferências do usuário.
+- `buildJarbasSystemPrompt({ memory, conversationSummary?, userIntent?, userEmotion?, urgency?, channel? })`: gera o prompt operacional completo seguindo o protocolo da persona.
+- `evolveJarbasMemory(memory, updates)`: ajusta `context`, `evolution` e `preferences` preservando frases/interações recentes.
+- `registerJarbasResponse(memory, response, interactionSummary?)`: registra frases utilizadas em uma resposta para evitar repetições nas próximas interações.
+- `validateJarbasResponse(response, memory)`: verifica limites de 300 palavras, ausência de meta-referências e repetição de frases recentes, retornando violações quando existirem.
+
 ## Reputação (`sdk/reputation`)
 
 ### `recordEvent(event)`
@@ -253,17 +261,17 @@ para consumo direto em aplicações React/Next e podem ser reaproveitados em min
 
 ### `TopBar`
 Renderiza a navegação principal com atalho de conexão de carteira (`useWallet`). Recebe `summary` (digest ativo, totais e host)
-para exibir o estado recente do orquestrador em tempo real, aplicando microtransições com keyframes inspirados no Framer Motion à marca, navegação e
-status da rede lógica (`befree-holo-testnet`).
+para exibir o estado recente do orquestrador em tempo real, além da marca BEFREE e status da rede lógica (`befree-holo-testnet`).
+Aceita `onOpenPreferences` para expor o botão “Atmosfera”, integrando com o painel de personalização.
 
 ### `RadialFeed`
-Organiza pulsos (`Pulse[]`) recebidos via `loadCommunitySnapshot()` em órbitas calculadas por `usePulseLayout`, com halos animados
-e respiração contínua de cada `FeedOrb` por meio de keyframes inspirados no Framer Motion para destacar reputação, energia e assistências do Jarbas.
+Organiza pulsos (`Pulse[]`) recebidos via `loadCommunitySnapshot()` em órbitas calculadas por `usePulseLayout`, destacando
+reputação, energia e assistências do Jarbas. Utiliza `FeedOrb` para cada entrada.
 
 ### `JarbasPanel`
-Painel do assistente pessoal com os insights do módulo `useJarbasPresence(insights)`. Mostra humor, status
-(escutando/respondendo) e ações recomendadas com rotação automática das mensagens geradas pelo digest, além de aura holográfica e
-transições escalonadas via keyframes para cada insight.
+Painel do assistente pessoal com os insights do módulo `useJarbasPresence(insights)`. Além de humor/status
+(escutando/respondendo), exibe missão, traços e compromissos “NUNCA/SEMPRE” da persona, memória ativa derivada
+de `loadCommunitySnapshot`, modos avançados disponíveis e um botão para copiar o prompt operacional gerado via `personaPrompt`.
 
 ### `ReputationCard`
 Recebe `participants` mapeados do orquestrador e apresenta métricas agregadas (`useReputationMetrics`) e destaques individuais
@@ -273,16 +281,30 @@ de reputação, streak e BFR acumulado.
 Lista `circles` sintetizados a partir das tendências do digest, com nível de confiança, membros e estado de cifragem.
 
 ### `ActionDock`
-Contém `VoiceInput`, botão de novo pulse, captura de prova viva e atalho para círculos fechados. Mantém visual adaptado ao fluxo
-por voz descrito no roadmap e dispara sons contextuais via `useSonicFeedback` (Web Audio) para reforçar ações-chave.
+Contém `VoiceInput`, botão de novo pulse, captura de prova viva, atalho para círculos fechados e o gatilho de personalização.
+Recebe `onOpenPreferences` e `onPulse` para encadear feedback sensorial via `useSensoryBridge`.
+
+### `PersonalizationPanel`
+Overlay client-side que permite alternar tema (`neo`, `sol`, `noir`), intensidade de animação (`motion`), filtros do feed,
+trilha/háptica, volume e TTS do Jarbas. Aceita `open`, `onClose` e `onPreviewTone(event)` para disparar tons de pré-escuta.
+
+### `ExperienceShell`
+Client wrapper que combina `PersonalizationProvider`, `SensoryBridgeProvider` e os componentes do feed radial. Recebe
+`community: LiveCommunityData` e cuida de abrir/fechar o painel de personalização ao clicar em “Atmosfera”.
 
 ### Hooks utilitários
 - `usePulseLayout(pulses)`: projeta conteúdo em órbitas (`angle`, `radius`) para efeitos radiais.
 - `useJarbasPresence(insights)`: simula batimento de presença do Jarbas enquanto insights fornecidos são rotacionados.
+- `useJarbasSensory(presence)`: liga trilha ambiente, TTS e vibração conforme o estado/mood do Jarbas e retorna `triggerEventTone`.
+- `usePersonalization()`: expõe `preferences`, `setPreference` e `resetPreferences`, sincronizando atributos `data-*` no `body`.
+- `useSensoryBridge()`: permite compartilhar `trigger(event)` e `register(handler)` entre o Jarbas e demais componentes.
 - `useWallet()`: stub de conexão com WalletConnect, exibindo endereço e rede.
 - `useReputationMetrics(participants)`: agrega reputação média, pico e piso a partir dos participantes recebidos.
-- `useSonicFeedback()`: inicializa um `AudioContext` sob demanda e expõe `trigger(event)` para eventos sonoros (`publish`,
-  `reward`, `burn`) usados pelo `ActionDock` e componentes futuros.
+
+### Manifesto e Service Worker
+- `app/manifest.ts`: implementa `MetadataRoute.Manifest` com nome/ticker BEFREE/BFR, cores do tema e ícones SVG (inclui variant maskable).
+- `public/sw.js`: service worker com cache básico (`CACHE_NAME = 'befree-shell-v1'`) instalado via `ServiceWorkerRegister`.
+- `ServiceWorkerRegister`: componente client que registra `/sw.js` quando `navigator.serviceWorker` está disponível.
 
 ### `loadCommunitySnapshot(options?)`
 Função assíncrona localizada em `apps/frontend/lib/liveCommunity.ts` que instancia o `CommunityOrchestrator`, executa o cenário
@@ -292,7 +314,8 @@ padrão via `runSimulation`, gera digest, mapeia pulsos, participantes, círculo
 
 ### Dados de demonstração
 O módulo `lib/demoData` fornece tipos, prompts de voz e o `fallbackCommunityData`, utilizado como reserva quando
-`loadCommunitySnapshot()` não consegue executar o orquestrador (ex.: ambientes sem `ts-node`).
+`loadCommunitySnapshot()` não consegue executar o orquestrador (ex.: ambientes sem `ts-node`). O fallback agora
+inclui `persona`, `jarbasMemory` e `personaPrompt`, alinhados ao protocolo comportamental definido em `sdk/ai/jarbasPersona`.
 
 ## CLI (`packages/cli`)
 
